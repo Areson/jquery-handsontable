@@ -399,6 +399,14 @@ Handsontable.Dom.outerHeight = function (elem) {
   }
 };
 
+Handsontable.Dom.innerHeight = function (elem) {
+  return elem.clientHeight;
+};
+
+Handsontable.Dom.innerWidth = function (elem) {
+  return elem.innerWidth;
+};
+
 (function () {
   var hasCaptionProblem;
 
@@ -453,6 +461,24 @@ Handsontable.Dom.outerHeight = function (elem) {
       return rc.text.length;
     }
     return 0;
+  };
+
+  /**
+   * Returns end of the selection in text input
+   * @return {Number}
+   */
+  Handsontable.Dom.getSelectionEndPosition = function (el) {
+    if(el.selectionEnd) {
+      return el.selectionEnd;
+    } else if(document.selection) { //IE8
+      var r = document.selection.createRange();
+      if(r == null) {
+        return 0;
+      }
+      var re = el.createTextRange();
+
+      return re.text.indexOf(r.text) + r.text.length;
+    }
   };
 
   /**

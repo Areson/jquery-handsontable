@@ -4,7 +4,6 @@
  */
 Handsontable.TableView = function (instance) {
   var that = this
-    , $window = $(window)
     , $documentElement = $(document.documentElement);
 
   this.instance = instance;
@@ -42,7 +41,7 @@ Handsontable.TableView = function (instance) {
   var isMouseDown;
   this.isMouseDown = function() {
     return isMouseDown;
-  }
+  };
 
   $documentElement.on('mouseup.' + instance.guid, function (event) {
     if (instance.selection.isInProgress() && event.which === 1) { //is left mouse button
@@ -306,13 +305,6 @@ Handsontable.TableView = function (instance) {
   this.wt = new Walkontable(walkontableConfig);
   this.activeWt = this.wt;
 
-  /*$window.on('resize.' + instance.guid, function () {
-    instance._registerTimeout('resizeTimeout', function () {
-      instance.forceFullRender = true;
-      that.render();
-    }, 60);
-  });*/
-
   $(that.wt.wtTable.spreader).on('mousedown.handsontable, contextmenu.handsontable', function (event) {
     if (event.target === that.wt.wtTable.spreader && event.which === 3) { //right mouse button exactly on spreader means right clickon the right hand side of vertical scrollbar
       event.stopPropagation();
@@ -342,14 +334,6 @@ Handsontable.TableView.prototype.isTextSelectionAllowed = function (el) {
 Handsontable.TableView.prototype.isCellEdited = function () {
   var activeEditor = this.instance.getActiveEditor();
   return activeEditor && activeEditor.isOpened();
-};
-
-Handsontable.TableView.prototype.getWidth = function () {
-  return this.wt.wtViewport.getWorkspaceActualWidth();
-};
-
-Handsontable.TableView.prototype.getHeight = function () {
-  return this.wt.wtViewport.getWorkspaceActualHeight();
 };
 
 Handsontable.TableView.prototype.beforeRender = function (force) {
@@ -440,7 +424,7 @@ Handsontable.TableView.prototype.appendColHeader = function (col, TH) {
 
 /**
  * Given a element's left position relative to the viewport, returns maximum element width until the right edge of the viewport (before scrollbar)
- * @param {Number} left
+ * @param {Number} leftOffset
  * @return {Number}
  */
 Handsontable.TableView.prototype.maximumVisibleElementWidth = function (leftOffset) {
