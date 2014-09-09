@@ -336,7 +336,7 @@
   Handsontable.helper.inherit(Handsontable.UndoRedo.CollectionAction, Handsontable.UndoRedo.Action);
   Handsontable.UndoRedo.CollectionAction.prototype.undo = function(instance, undoneCallback) {
     var callbackStub = function() {};
-    for(var i = 0; i < this.collection.length; i++) {
+    for(var i = this.collection.length - 1; i >= 0; i--) {
       this.collection[i].undo(instance, callbackStub);
     }
 
