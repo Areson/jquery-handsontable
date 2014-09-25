@@ -203,7 +203,7 @@
       && emptyRowsAtTheEnd == instance.getSettings().minSpareRows) {
         instance.alter('remove_row', parseInt(data[i][0]+1,10), instance.getSettings().minSpareRows);
 
-        instance.undoRedo.doneActions.pop();
+        //instance.undoRedo.doneActions.pop();
 
       }
 
@@ -212,7 +212,7 @@
       && emptyColsAtTheEnd == instance.getSettings().minSpareCols) {
         instance.alter('remove_col', parseInt(data[i][1]+1,10), instance.getSettings().minSpareCols);
 
-        instance.undoRedo.doneActions.pop();
+        //instance.undoRedo.doneActions.pop();
       }
     }
 
