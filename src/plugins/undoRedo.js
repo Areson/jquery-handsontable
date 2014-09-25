@@ -193,7 +193,7 @@
       data[i].splice(3, 1);
     }
 
-    instance.addHookOnce('afterChange', undoneCallback);
+    //instance.addHookOnce('afterChange', undoneCallback);
 
     instance.setDataAtRowProp(data, null, null, 'undo');
 
@@ -201,23 +201,17 @@
      if(instance.getSettings().minSpareRows &&
       data[i][0] + 1 + instance.getSettings().minSpareRows === instance.countRows()
       && emptyRowsAtTheEnd == instance.getSettings().minSpareRows) {
-        instance.alter('remove_row', parseInt(data[i][0]+1,10), instance.getSettings().minSpareRows);
-        
-        if(!instance.undoRedo.ignoreNewActions)
-          instance.undoRedo.doneActions.pop();
-
+        instance.alter('remove_row', parseInt(data[i][0]+1,10), instance.getSettings().minSpareRows);        
       }
 
       if (instance.getSettings().minSpareCols &&
       data[i][1] + 1 + instance.getSettings().minSpareCols === instance.countCols()
       && emptyColsAtTheEnd == instance.getSettings().minSpareCols) {
-        instance.alter('remove_col', parseInt(data[i][1]+1,10), instance.getSettings().minSpareCols);
-
-        if(!instance.undoRedo.ignoreNewActions)
-          instance.undoRedo.doneActions.pop();
+        instance.alter('remove_col', parseInt(data[i][1]+1,10), instance.getSettings().minSpareCols);      
       }
     }
 
+    undoneCallback();
   };
   Handsontable.UndoRedo.ChangeAction.prototype.redo = function (instance, onFinishCallback) {
     var data = $.extend(true, [], this.changes);
