@@ -202,6 +202,7 @@
       data[i][0] + 1 + instance.getSettings().minSpareRows === instance.countRows()
       && emptyRowsAtTheEnd == instance.getSettings().minSpareRows) {
         instance.alter('remove_row', parseInt(data[i][0]+1,10), instance.getSettings().minSpareRows);
+        
         if(!instance.undoRedo.ignoreNewActions)
           instance.undoRedo.doneActions.pop();
 
