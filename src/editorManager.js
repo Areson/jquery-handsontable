@@ -35,19 +35,7 @@
 
             if (!activeEditor.isWaiting()) {
               if (!Handsontable.helper.isMetaKey(event.keyCode) && !ctrlDown && !that.isEditorOpened()) {
-
-                var charCode = event.keyCode;
-                var charStr = String.fromCharCode(charCode);
-                var isUp = (charCode >= 65 && charCode <= 90) ? true : false; // uppercase
-                var isLow = (charCode >= 97 && charCode <= 122) ? true : false; // lowercase
-                // uppercase w/out shift or lowercase with shift == caps lock
-                if ((isUp && !event.shiftKey) || (isLow && event.shiftKey)) {
-                  charStr = charStr.toLowerCase();
-                }
-                that.openEditor(charStr);
-
-                event.preventDefault();
-                event.stopPropagation(); //required by HandsontableEditor
+                that.openEditor("");
                 return;
               }
             }
@@ -62,8 +50,8 @@
 
                     event.preventDefault();
                     event.stopPropagation();
-                    break;
                   }
+                  break;
 
                 case keyCodes.ARROW_UP:
 
@@ -200,9 +188,6 @@
                   instance.view.render();
                   event.preventDefault(); //don't page down the window
                   event.stopPropagation(); //required by HandsontableEditor
-                  break;
-
-                default:
                   break;
               }
 

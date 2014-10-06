@@ -160,6 +160,85 @@ describe("handsontable.MergeCells", function () {
 
     });
 
+    it("should not switch the selection start point when selecting from non-merged cells to merged cells", function() {
+      var hot = handsontable({
+        data: createSpreadsheetObjectData(10, 10),
+        mergeCells: [
+          {row: 1, col: 1, rowspan: 3, colspan: 3},
+          {row: 3, col: 4, rowspan: 2, colspan: 2}
+        ]
+      });
+
+      $(hot.getCell(6,6)).trigger('mousedown');
+
+      expect(hot.getSelectedRange().from.col).toEqual(6);
+      expect(hot.getSelectedRange().from.row).toEqual(6);
+
+      $(hot.getCell(1,1)).trigger('mouseenter');
+
+      expect(hot.getSelectedRange().from.col).toEqual(6);
+      expect(hot.getSelectedRange().from.row).toEqual(6);
+
+      $(hot.getCell(3,3)).trigger('mouseenter');
+
+      expect(hot.getSelectedRange().from.col).toEqual(6);
+      expect(hot.getSelectedRange().from.row).toEqual(6);
+
+      $(hot.getCell(4,4)).trigger('mouseenter');
+
+      expect(hot.getSelectedRange().from.col).toEqual(6);
+      expect(hot.getSelectedRange().from.row).toEqual(6);
+
+    });
+
+    it("should select cells in the correct direction when changing selections around a merged range", function () {
+      var hot = handsontable({
+        data: createSpreadsheetObjectData(10, 10),
+        mergeCells: [
+          {row: 4, col: 4, rowspan: 2, colspan: 2}
+        ]
+      });
+
+      hot.selectCell(5,5,5,2);
+      expect(hot.getSelectedRange().getDirection()).toEqual("SE-NW");
+
+      hot.selectCell(4,4,2,5);
+      expect(hot.getSelectedRange().getDirection()).toEqual("SW-NE");
+
+      hot.selectCell(4,4,5,7);
+      expect(hot.getSelectedRange().getDirection()).toEqual("NW-SE");
+
+      hot.selectCell(4,5,7,5);
+      expect(hot.getSelectedRange().getDirection()).toEqual("NE-SW");
+    });
+
+    it("should not add an area class to the selected cell if a single merged cell is selected", function() {
+      var hot = handsontable({
+        data: createSpreadsheetObjectData(6, 6),
+        mergeCells: [
+          {
+            row: 1,
+            col: 1,
+            colspan: 3,
+            rowspan: 2
+          }
+        ]
+      });
+
+      selectCell(1,1);
+      expect(getCell(1,1).className.indexOf('area')).toEqual(-1);
+
+      selectCell(1,1,4,4);
+      expect(getCell(1,1).className.indexOf('area')).toNotEqual(-1);
+
+      selectCell(1,1);
+      expect(getCell(1,1).className.indexOf('area')).toEqual(-1);
+
+      selectCell(0,0);
+      expect(getCell(1,1).className.indexOf('area')).toEqual(-1);
+
+    });
+
   });
 
   describe("modifyTransform", function () {
@@ -299,5 +378,57 @@ describe("handsontable.MergeCells", function () {
     });
 
   });
-})
-;
+
+  describe("merged cells scroll", function () {
+    it("getCell should return merged cell parent", function () {
+      var hot = handsontable({
+        data: createSpreadsheetObjectData(10, 5),
+        mergeCells: [
+          {row: 0, col: 0, rowspan: 2, colspan: 2}
+        ],
+        height: 100,
+        width: 400
+      });
+
+      var mergedCellParent = hot.getCell(0, 0);
+      var mergedCellHidden = hot.getCell(1, 1);
+
+      expect(mergedCellHidden).toBe(mergedCellParent);
+    });
+
+    it("should scroll viewport to beginning of a merged cell when it's clicked", function () {
+      var hot = handsontable({
+        data: createSpreadsheetObjectData(10, 5),
+        mergeCells: [
+          {row: 5, col: 0, rowspan: 2, colspan: 2}
+        ],
+        height: 100,
+        width: 400
+      });
+
+      hot.rootElement[0].scrollTop = 130;
+      hot.render();
+
+      expect(hot.rootElement[0].scrollTop).toBe(130);
+
+      var TD = hot.getCell(5, 0);
+      mouseDown(TD);
+      mouseUp(TD);
+      var mergedCellScrollTop = hot.rootElement[0].scrollTop;
+      expect(mergedCellScrollTop).toBeLessThan(130);
+      expect(mergedCellScrollTop).toBeGreaterThan(0);
+
+      hot.rootElement[0].scrollTop = 0;
+      hot.render();
+
+      hot.rootElement[0].scrollTop = 130;
+      hot.render();
+
+      TD = hot.getCell(5, 2);
+      mouseDown(TD);
+      mouseUp(TD);
+      var regularCellScrollTop = hot.rootElement[0].scrollTop;
+      expect(mergedCellScrollTop).toBe(regularCellScrollTop);
+    });
+  });
+});

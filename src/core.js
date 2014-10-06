@@ -30,7 +30,7 @@ Handsontable.Core = function (rootElement, userSettings) {
 
   this.guid = 'ht_' + Handsontable.helper.randomString(); //this is the namespace for global events
 
-  if (!this.rootElement[0].id) {
+  if (!this.rootElement[0].id || this.rootElement[0].id.substring(0, 3) === "ht_") {
     this.rootElement[0].id = this.guid; //if root element does not have an id, assign a random id
   }
 
@@ -430,7 +430,12 @@ Handsontable.Core = function (rootElement, userSettings) {
      * @return {Boolean}
      */
     isMultiple: function () {
-      return !(priv.selRange.to.col === priv.selRange.from.col && priv.selRange.to.row === priv.selRange.from.row);
+      var isMultiple = !(priv.selRange.to.col === priv.selRange.from.col && priv.selRange.to.row === priv.selRange.from.row)
+        , modifier = Handsontable.hooks.execute(instance, 'afterIsMultipleSelection', isMultiple);
+
+      if(isMultiple) {
+        return modifier;
+      }
     },
 
     /**
