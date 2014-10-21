@@ -53,7 +53,7 @@
         createTmpContainer.call(tmp, instance);
       }
 
-      tmp.container.className = instance.rootElement[0].className + ' htAutoColumnSize' (force ? ' htOverrideColumnSize' : '');
+      tmp.container.className = instance.rootElement[0].className + ' htAutoColumnSize' + (force ? ' htOverrideColumnSize' : '');
       tmp.table.className = instance.$table[0].className;
 
       var rows = instance.countRows();
