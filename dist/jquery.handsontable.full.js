@@ -6,7 +6,7 @@
  * Licensed under the MIT license.
  * http://handsontable.com/
  *
- * Date: Tue Oct 21 2014 08:20:46 GMT-0700 (Pacific Daylight Time)
+ * Date: Tue Oct 21 2014 08:41:11 GMT-0700 (Pacific Daylight Time)
  */
 /*jslint white: true, browser: true, plusplus: true, indent: 4, maxerr: 50 */
 
@@ -5653,15 +5653,16 @@ Handsontable.helper.toString = function (obj) {
 
     this.TEXTAREA.style.fontSize = Handsontable.Dom.getComputedStyle(this.TD).fontSize;
     this.TEXTAREA.style.fontFamily = Handsontable.Dom.getComputedStyle(this.TD).fontFamily;
+    
+    this.textareaParentStyle.display = 'block';
 
+    // Set the resize after the block is displayed so the height is correct on the initial showing
     this.autoResize.init(this.TEXTAREA, {
       minHeight: Math.min(height, maxHeight),
       maxHeight: maxHeight, //TEXTAREA should never be wider than visible part of the viewport (should not cover the scrollbar)
       minWidth: Math.min(width, maxWidth),
       maxWidth: maxWidth //TEXTAREA should never be wider than visible part of the viewport (should not cover the scrollbar)
     });
-
-    this.textareaParentStyle.display = 'block';
   };
 
   TextEditor.prototype.bindEvents = function () {
