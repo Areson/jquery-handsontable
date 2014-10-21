@@ -240,15 +240,16 @@
 
     this.TEXTAREA.style.fontSize = Handsontable.Dom.getComputedStyle(this.TD).fontSize;
     this.TEXTAREA.style.fontFamily = Handsontable.Dom.getComputedStyle(this.TD).fontFamily;
+    
+    this.textareaParentStyle.display = 'block';
 
+    // Set the resize after the block is displayed so the height is correct on the initial showing
     this.autoResize.init(this.TEXTAREA, {
       minHeight: Math.min(height, maxHeight),
       maxHeight: maxHeight, //TEXTAREA should never be wider than visible part of the viewport (should not cover the scrollbar)
       minWidth: Math.min(width, maxWidth),
       maxWidth: maxWidth //TEXTAREA should never be wider than visible part of the viewport (should not cover the scrollbar)
     });
-
-    this.textareaParentStyle.display = 'block';
   };
 
   TextEditor.prototype.bindEvents = function () {
