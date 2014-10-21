@@ -6,7 +6,7 @@
  * Licensed under the MIT license.
  * http://handsontable.com/
  *
- * Date: Mon Oct 06 2014 08:51:58 GMT-0700 (Pacific Daylight Time)
+ * Date: Tue Oct 21 2014 08:20:46 GMT-0700 (Pacific Daylight Time)
  */
 /*jslint white: true, browser: true, plusplus: true, indent: 4, maxerr: 50 */
 
@@ -7744,7 +7744,7 @@ Handsontable.PluginHooks = Handsontable.hooks; //in future move this line to leg
       }
     };
 
-    this.determineColumnWidth = function (col) {
+    this.determineColumnWidth = function (col, force) {
       var instance = this
         , tmp = instance.autoColumnSizeTmp;
 
@@ -7752,7 +7752,7 @@ Handsontable.PluginHooks = Handsontable.hooks; //in future move this line to leg
         createTmpContainer.call(tmp, instance);
       }
 
-      tmp.container.className = instance.rootElement[0].className + ' htAutoColumnSize';
+      tmp.container.className = instance.rootElement[0].className + ' htAutoColumnSize' + (force ? ' htOverrideColumnSize' : '');
       tmp.table.className = instance.$table[0].className;
 
       var rows = instance.countRows();
@@ -9791,7 +9791,7 @@ function HandsontableManualColumnResize() {
       if (autoresizeTimeout == null) {
         autoresizeTimeout = setTimeout(function () {
           if (dblclick >= 2) {
-            newSize = instance.determineColumnWidth.call(instance, currentCol);
+            newSize = instance.determineColumnWidth.call(instance, currentCol, true);
             setManualSize(currentCol, newSize);
             instance.forceFullRender = true;
             instance.view.render(); //updates all
