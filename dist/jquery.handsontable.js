@@ -6,7 +6,7 @@
  * Licensed under the MIT license.
  * http://handsontable.com/
  *
- * Date: Tue Oct 21 2014 08:41:11 GMT-0700 (Pacific Daylight Time)
+ * Date: Mon Oct 27 2014 13:57:43 GMT-0700 (Pacific Daylight Time)
  */
 /*jslint white: true, browser: true, plusplus: true, indent: 4, maxerr: 50 */
 
@@ -10682,7 +10682,7 @@ function Storage(prefix) {
       data[i].splice(3, 1);
     }
 
-    //instance.addHookOnce('afterChange', undoneCallback);
+    instance.addHookOnce('afterChange', undoneCallback);
 
     instance.setDataAtRowProp(data, null, null, 'undo');
 
@@ -10698,9 +10698,7 @@ function Storage(prefix) {
       && emptyColsAtTheEnd == instance.getSettings().minSpareCols) {
         instance.alter('remove_col', parseInt(data[i][1]+1,10), instance.getSettings().minSpareCols);      
       }
-    }
-
-    undoneCallback();
+    }  
   };
   Handsontable.UndoRedo.ChangeAction.prototype.redo = function (instance, onFinishCallback) {
     var data = $.extend(true, [], this.changes);
@@ -10820,22 +10818,86 @@ function Storage(prefix) {
   };
   Handsontable.helper.inherit(Handsontable.UndoRedo.CollectionAction, Handsontable.UndoRedo.Action);
   Handsontable.UndoRedo.CollectionAction.prototype.undo = function(instance, undoneCallback) {
-    var callbackStub = function() {};
-    for(var i = this.collection.length - 1; i >= 0; i--) {
-      this.collection[i].undo(instance, callbackStub);
-    }
+    var finishedLength = this.collection.length;
+    var undoStepsResolved = 0;
+    var collection = this.collection;
+    var index = this.collection.length;
 
-    instance.addHookOnce('afterRender', undoneCallback);
-    instance.render();
+    var createCallbackStub = function() {
+      return function() {
+        undoStepsResolved++;
+
+        if(undoStepsResolved == finishedLength) {
+          undoneCallback();
+        }
+      };
+    };
+
+    var evaluateFunction = function() {
+      if(index > 0) {
+        var item = collection[--index];
+
+        if(item instanceof Handsontable.UndoRedo.ChangeAction) {
+          var callback = createCallbackStub();
+          var loopFunction = function() {
+            callback();
+            evaluateFunction();
+          };
+
+          item.undo(instance, loopFunction);
+        }
+        else {
+          item.undo(instance, createCallbackStub());
+          evaluateFunction();
+        }
+      }
+      else {
+        instance.render();
+      }
+    };
+    
+    evaluateFunction();
   };
   Handsontable.UndoRedo.CollectionAction.prototype.redo = function(instance, redoneCallback) {
-    var callbackStub = function() {};
-    for(var i = 0; i < this.collection.length; i++) {
-      this.collection[i].redo(instance, callbackStub);
-    }
+    var finishedLength = this.collection.length;
+    var undoStepsResolved = 0;
+    var collection = this.collection;
+    var index = 0;
+    
+    var createCallbackStub = function() {
+      return function() {
+        undoStepsResolved++;
 
-    instance.addHookOnce('afterRender', redoneCallback);
-    instance.render();
+        if(undoStepsResolved == finishedLength) {
+          redoneCallback();
+        }
+      };
+    };
+
+    var evaluateFunction = function() {
+      if(index < collection.length) {
+        var item = collection[index++];
+
+        if(item instanceof Handsontable.UndoRedo.ChangeAction) {
+          var callback = createCallbackStub();
+          var loopFunction = function() {
+            callback();
+            evaluateFunction();
+          };
+
+          item.redo(instance, loopFunction);
+        }
+        else {
+          item.redo(instance, createCallbackStub());
+          evaluateFunction();
+        }
+      }
+      else {
+        instance.render();
+      }
+    };
+    
+    evaluateFunction();
   };
 
   Handsontable.UndoRedo.RevertFilterAction = function(currentFilterColumns, previousFilterColumns) {
