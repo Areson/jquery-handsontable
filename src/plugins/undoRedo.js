@@ -193,7 +193,7 @@
       data[i].splice(3, 1);
     }
 
-    //instance.addHookOnce('afterChange', undoneCallback);
+    instance.addHookOnce('afterChange', undoneCallback);
 
     instance.setDataAtRowProp(data, null, null, 'undo');
 
@@ -209,9 +209,7 @@
       && emptyColsAtTheEnd == instance.getSettings().minSpareCols) {
         instance.alter('remove_col', parseInt(data[i][1]+1,10), instance.getSettings().minSpareCols);      
       }
-    }
-
-    undoneCallback();
+    }  
   };
   Handsontable.UndoRedo.ChangeAction.prototype.redo = function (instance, onFinishCallback) {
     var data = $.extend(true, [], this.changes);
