@@ -6,7 +6,7 @@
  * Licensed under the MIT license.
  * http://handsontable.com/
  *
- * Date: Mon Oct 27 2014 13:57:43 GMT-0700 (Pacific Daylight Time)
+ * Date: Fri Oct 31 2014 09:28:44 GMT-0700 (Pacific Daylight Time)
  */
 /*jslint white: true, browser: true, plusplus: true, indent: 4, maxerr: 50 */
 
@@ -10682,7 +10682,14 @@ function Storage(prefix) {
       data[i].splice(3, 1);
     }
 
-    instance.addHookOnce('afterChange', undoneCallback);
+    var firedCount = 0;    
+    var _checkForCompletion = function() {
+      if(++firedCount === 2) {        
+        undoneCallback();
+      }
+    };
+
+    instance.addHookOnce('afterChange', _checkForCompletion);
 
     instance.setDataAtRowProp(data, null, null, 'undo');
 
@@ -10698,7 +10705,9 @@ function Storage(prefix) {
       && emptyColsAtTheEnd == instance.getSettings().minSpareCols) {
         instance.alter('remove_col', parseInt(data[i][1]+1,10), instance.getSettings().minSpareCols);      
       }
-    }  
+    }
+
+    _checkForCompletion();
   };
   Handsontable.UndoRedo.ChangeAction.prototype.redo = function (instance, onFinishCallback) {
     var data = $.extend(true, [], this.changes);
