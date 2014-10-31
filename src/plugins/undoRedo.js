@@ -200,7 +200,7 @@
       }
     };
 
-    instance.addHookOnce('afterChange', undoneCallback);
+    instance.addHookOnce('afterChange', _checkForCompletion);
 
     instance.setDataAtRowProp(data, null, null, 'undo');
 
