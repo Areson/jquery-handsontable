@@ -17,13 +17,14 @@ WalkontableOverlay.prototype.init = function () {
   this.fixed = this.instance.wtTable.hider;
   this.fixedContainer = this.instance.wtTable.holder;
   this.scrollHandler = this.getScrollableElement(this.TABLE);
-  this.$scrollHandler = $(this.scrollHandler); //in future remove jQuery from here
 };
 
 WalkontableOverlay.prototype.makeClone = function (direction) {
   var clone = document.createElement('DIV');
   clone.className = 'ht_clone_' + direction + ' handsontable';
 	clone.style.position = 'absolute';
+	clone.style.top = 0;
+	clone.style.left = 0;
   clone.style.overflow = 'hidden';
 
   var table2 = document.createElement('TABLE');
@@ -53,39 +54,11 @@ WalkontableOverlay.prototype.getScrollableElement = function (TABLE) {
   return window;
 };
 
-WalkontableOverlay.prototype.onScroll = function () {
-
-  this.windowScrollPosition = this.getScrollPosition();
-  this.readSettings(); //read window scroll position
-
-  this.resetFixedPosition(); //may be redundant
-};
-
-WalkontableOverlay.prototype.availableSize = function () {
-  var availableSize;
-
-  if (this.windowScrollPosition > this.tableParentOffset /*&& last > -1*/) { //last -1 means that viewport is scrolled behind the table
-    if (this.instance.wtTable.getLastVisibleRow() === this.total - 1) {
-      availableSize = Handsontable.Dom.outerHeight(this.TABLE);
-    }
-    else {
-      availableSize = this.windowSize;
-    }
-  }
-  else {
-    availableSize = this.windowSize - (this.tableParentOffset);
-  }
-
-  return availableSize;
-};
-
 WalkontableOverlay.prototype.refresh = function (selectionsOnly) {
   this.clone && this.clone.draw(selectionsOnly);
 };
 
 WalkontableOverlay.prototype.destroy = function () {
-  this.$scrollHandler.off('.' + this.clone.guid);
-  $(window).off('.' + this.clone.guid);
-  $(document).off('.' + this.clone.guid);
-  $(document.body).off('.' + this.clone.guid);
+  var eventManager = Handsontable.eventManager(this.clone);
+  eventManager.clear();
 };

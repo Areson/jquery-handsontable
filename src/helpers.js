@@ -144,7 +144,7 @@ Handsontable.helper.randomString = function () {
 /**
  * Inherit without without calling parent constructor, and setting `Child.prototype.constructor` to `Child` instead of `Parent`.
  * Creates temporary dummy function to call it as constructor.
- * Described in ticket: https://github.com/handsontable/jquery-handsontable/pull/516
+ * Described in ticket: https://github.com/handsontable/handsontable/pull/516
  * @param  {Object} Child  child class
  * @param  {Object} Parent parent class
  * @return {Object}        extended Child
@@ -166,6 +166,47 @@ Handsontable.helper.extend = function (target, extension) {
     if (extension.hasOwnProperty(i)) {
       target[i] = extension[i];
     }
+  }
+};
+
+/**
+ * Perform deep extend of a target object with extension's own properties
+ * @param {Object} target An object that will receive the new properties
+ * @param {Object} extension An object containing additional properties to merge into the target
+ */
+Handsontable.helper.deepExtend = function (target, extension) {
+  for (var key in extension) {
+    if (extension.hasOwnProperty(key)) {
+      if (extension[key] && typeof extension[key] === 'object') {
+        if (!target[key]) {
+          if (Handsontable.helper.isArray(extension[key])) {
+            target[key] = [];
+          }
+          else {
+            target[key] = {};
+          }
+        }
+        Handsontable.helper.deepExtend(target[key], extension[key]);
+      }
+      else {
+        target[key] = extension[key];
+      }
+    }
+  }
+};
+
+/**
+ * Perform deep clone of an object
+ * WARNING! Only clones JSON properties. Will cause error when `obj` contains a function, Date, etc
+ * @param {Object} obj An object that will be cloned
+ * @return {Object}
+ */
+Handsontable.helper.deepClone = function (obj) {
+  if (typeof obj === "object") {
+    return JSON.parse(JSON.stringify(obj));
+  }
+  else {
+    return obj;
   }
 };
 
@@ -442,4 +483,71 @@ Handsontable.helper.cellMethodLookupFactory = function (methodName, allowUndefin
 
 Handsontable.helper.toString = function (obj) {
   return '' + obj;
+};
+
+Handsontable.helper.isMobileBrowser = function (userAgent) {
+  if(!userAgent) {
+    userAgent = navigator.userAgent;
+  }
+  return (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent));
+
+  // Logic for checking the specific mobile browser
+  //
+  /* var type = type != void 0 ? type.toLowerCase() : ''
+    , result;
+  switch(type) {
+    case '':
+      result = (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+      return result;
+      break;
+    case 'ipad':
+      return navigator.userAgent.indexOf('iPad') > -1;
+      break;
+    case 'android':
+      return navigator.userAgent.indexOf('Android') > -1;
+      break;
+    case 'windows':
+      return navigator.userAgent.indexOf('IEMobile') > -1;
+      break;
+    default:
+      throw new Error('Invalid isMobileBrowser argument');
+      break;
+  } */
+};
+
+Handsontable.helper.isTouchSupported = function () {
+  return ('ontouchstart' in window);
+};
+
+Handsontable.helper.stopPropagation = function (event) {
+  // ie8
+  //http://msdn.microsoft.com/en-us/library/ie/ff975462(v=vs.85).aspx
+  if (typeof (event.stopPropagation) === 'function') {
+    event.stopPropagation();
+  }
+  else {
+    event.cancelBubble = true;
+  }
+};
+
+Handsontable.helper.pageX = function (event) {
+  if (event.pageX) {
+    return event.pageX;
+  }
+
+  var scrollLeft = Handsontable.Dom.getWindowScrollLeft();
+  var cursorX = event.clientX + scrollLeft;
+
+  return cursorX;
+};
+
+Handsontable.helper.pageY = function (event) {
+  if (event.pageY) {
+    return event.pageY;
+  }
+
+  var scrollTop = Handsontable.Dom.getWindowScrollTop();
+  var cursorY = event.clientY + scrollTop;
+
+  return cursorY;
 };

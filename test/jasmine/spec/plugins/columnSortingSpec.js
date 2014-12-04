@@ -2,10 +2,11 @@ describe('ColumnSorting', function () {
   var id = 'testContainer';
 
   beforeEach(function () {
-    this.$container = $('<div id="' + id + '" style="width: 300px; height: 200px;"></div>').appendTo('body');
+    this.$container = $('<div id="' + id + '" style="overflow: auto; width: 300px; height: 200px;"></div>').appendTo('body');
 
     this.sortByColumn = function (columnIndex) {
-      this.$container.find('th span.columnSorting:eq(' + columnIndex + ')').click();
+//      this.$container.find('th span.columnSorting:eq(' + columnIndex + ')').click();
+      this.$container.find('th span.columnSorting:eq(' + columnIndex + ')').simulate('click');
     }
   });
 
@@ -235,11 +236,11 @@ describe('ColumnSorting', function () {
 
     expect(htCore.find('tbody tr:eq(0) td:eq(2)').text()).toMatch(/01\/14\/2006/);
 
-    htCore.find('th span.columnSorting:eq(2)').click();  // DESC sort after first click
+    htCore.find('th span.columnSorting:eq(2)').simulate('click');  // DESC sort after first click
 
     expect(htCore.find('tbody tr:eq(0) td:eq(2)').text()).toMatch(/02\/02\/2004/);
 
-    htCore.find('th span.columnSorting:eq(2)').click();  // ASC sort after second click
+    htCore.find('th span.columnSorting:eq(2)').simulate('click');  // ASC sort after second click
 
     expect(htCore.find('tbody tr:eq(0) td:eq(2)').text()).toMatch(/11\/19\/2011/);
 
@@ -692,7 +693,7 @@ describe('ColumnSorting', function () {
 
   });
 
-  it("should not display new row added directly to dataSource, when observeChanges plugin is explicitly disabled", function () {
+  xit("should not display new row added directly to dataSource, when observeChanges plugin is explicitly disabled", function () {
     var data = [
       [1, 'B'],
       [0, 'A'],
@@ -929,7 +930,7 @@ describe('ColumnSorting', function () {
         [2, "Frank", "Honest"],
         [3, "Joan", "Well"],
         [4, "Sid", "Strong"],
-        [5, "Jane", "Neat"],
+        [5, "Jane", "Neat"]
       ],
       colHeaders: true,
       rowHeaders: true,
@@ -959,7 +960,7 @@ describe('ColumnSorting', function () {
         [2, "Frank", "Honest"],
         [3, "Joan", "Well"],
         [4, "Sid", "Strong"],
-        [5, "Jane", "Neat"],
+        [5, "Jane", "Neat"]
       ],
       colHeaders: true,
       rowHeaders: true,
@@ -990,7 +991,7 @@ describe('ColumnSorting', function () {
         [2, "Frank", "Honest"],
         [3, "Joan", "Well"],
         [4, "Sid", "Strong"],
-        [5, "Jane", "Neat"],
+        [5, "Jane", "Neat"]
       ],
       colHeaders: true,
       rowHeaders: true,
@@ -1022,7 +1023,7 @@ describe('ColumnSorting', function () {
         [2, "Frank", "Honest"],
         [3, "Joan", "Well"],
         [4, "Sid", "Strong"],
-        [5, "Jane", "Neat"],
+        [5, "Jane", "Neat"]
       ],
       colHeaders: true,
       rowHeaders: true,
@@ -1052,5 +1053,51 @@ describe('ColumnSorting', function () {
 
     expect(getSourceDataAtCol(0)).toEqual([1, 2, 3, 4, 5]);
     expect(getSourceDataAtCol(1)).toEqual(["Ted", "Frank", "Joan", "Sid", "Jane"]);
+  });
+
+  it("should ignore case when sorting", function () {
+    var hot = handsontable({
+      data: [
+        [1, "albuquerque"],
+        [2, "Alabama"],
+        [3, "Missouri"]
+      ],
+      colHeaders: true,
+      columnSorting: true
+    });
+
+    this.sortByColumn(1);
+    expect(getDataAtCol(0)).toEqual([2, 1, 3]);
+    expect(getDataAtCol(1)).toEqual(["Alabama", "albuquerque", "Missouri"]);
+
+    this.sortByColumn(1);
+    expect(getDataAtCol(0)).toEqual([3, 1, 2]);
+    expect(getDataAtCol(1)).toEqual(["Missouri", "albuquerque", "Alabama"]);
+
+  });
+
+  it("should push empty cells to the end of sorted column", function () {
+    var hot = handsontable({
+      data:  [
+        [1, "Ted", "Right"],
+        [2, "", "Honest"],
+        [3, "", "Well"],
+        [4, "Sid", "Strong"],
+        [5, "Jane", "Neat"],
+      ],
+      colHeaders: true,
+      rowHeaders: true,
+      columnSorting: true,
+      minSpareRows: 1
+    });
+
+    this.sortByColumn(1);
+    expect(getDataAtCol(0)).toEqual([5, 4, 1, 2, 3, null]);
+    expect(getDataAtCol(1)).toEqual(["Jane", "Sid", "Ted", "", "", null]);
+
+    this.sortByColumn(1);
+    expect(getDataAtCol(0)).toEqual([1, 4, 5, 2, 3, null]);
+    expect(getDataAtCol(1)).toEqual(["Ted", "Sid", "Jane", "", "", null]);
+
   });
 });

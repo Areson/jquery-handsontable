@@ -31,14 +31,7 @@ var getLeftClone = function () {
   return spec().$container.find('.ht_clone_left');
 };
 
-var countRows = function () {
-  return getHtCore().find('tbody tr').length;
-};
-
-var countCols = function () {
-  return getHtCore().find('tbody tr:eq(0) td').length;
-};
-
+//Rename me to countTD
 var countCells = function () {
   return getHtCore().find('tbody td').length;
 };
@@ -50,6 +43,16 @@ var isEditorVisible = function () {
 var isFillHandleVisible = function () {
   return !!spec().$container.find('.wtBorder.corner:visible').length;
 };
+
+var getCorrespondingOverlay = function (cell, container) {
+  var overlay = $(cell).parents(".handsontable");
+  if(overlay[0] == container[0]) {
+    return $(".ht_master");
+  } else {
+    return $(overlay[0]);
+  }
+};
+
 
 /**
  * Shows context menu
@@ -66,16 +69,16 @@ var contextMenu = function () {
   var cell = getCell(selected[0], selected[1]);
   var cellOffset = $(cell).offset();
 
-  var ev = $.Event('contextmenu', {
-    pageX: cellOffset.left,
-    pageY: cellOffset.top
-  });
 
-  $(cell).trigger(ev);
+  $(cell).simulate('contextmenu',{
+    clientX: cellOffset.left,
+    clientY: cellOffset.top
+  });
 };
 
 var closeContextMenu = function () {
-  $(document).trigger('mousedown');
+  $(document).simulate('mousedown');
+//  $(document).trigger('mousedown');
 };
 
 /**
@@ -90,7 +93,8 @@ var handsontableMouseTriggerFactory = function (type, button) {
     }
     var ev = $.Event(type);
     ev.which = button || 1; //left click by default
-    element.trigger(ev);
+    element.simulate(type,ev);
+//    element.trigger(ev);
   }
 };
 
@@ -113,7 +117,8 @@ var mouseRightUp = handsontableMouseTriggerFactory('mouseup', 3);
  */
 var handsontableKeyTriggerFactory = function (type) {
   return function (key, extend) {
-    var ev = $.Event(type);
+    var ev = {};// $.Event(type);
+
     if (typeof key === 'string') {
       if (key.indexOf('shift+') > -1) {
         key = key.substring(6);
@@ -181,9 +186,11 @@ var handsontableKeyTriggerFactory = function (type) {
     else if (typeof key === 'number') {
       ev.keyCode = key;
     }
-    ev.originalEvent = {}; //needed as long Handsontable searches for event.originalEvent
+
+
+//    ev.originalEvent = {}; //needed as long Handsontable searches for event.originalEvent
     $.extend(ev, extend);
-    $(document.activeElement).trigger(ev);
+    $(document.activeElement).simulate(type, ev);
   }
 };
 
@@ -212,6 +219,48 @@ var keyDownUp = function (key, extend) {
  */
 var keyProxy = function () {
   return spec().$container.find('textarea.handsontableInput');
+};
+
+var serveImmediatePropagation = function (event) {
+  if (event != null && event.isImmediatePropagationEnabled == null) {
+    event.stopImmediatePropagation = function () {
+      this.isImmediatePropagationEnabled = false;
+      this.cancelBubble = true;
+    };
+    event.isImmediatePropagationEnabled = true;
+    event.isImmediatePropagationStopped = function () {
+      return !this.isImmediatePropagationEnabled;
+    };
+  }
+  return event;
+};
+
+var triggerTouchEvent = function (type, target, pageX, pageY) {
+  var e = document.createEvent('TouchEvent');
+  var targetCoords = target.getBoundingClientRect();
+  var touches
+    , targetTouches
+    , changedTouches;
+
+  if(!pageX && !pageY) {
+    pageX = parseInt(targetCoords.left + 3,10);
+    pageY = parseInt(targetCoords.top + 3,10);
+  }
+
+  var touch = document.createTouch(window, target, 0, pageX, pageY, pageX, pageY);
+
+  if (type == 'touchend') {
+    touches = document.createTouchList();
+    targetTouches = document.createTouchList();
+    changedTouches = document.createTouchList(touch);
+  } else {
+    touches = document.createTouchList(touch);
+    targetTouches = document.createTouchList(touch);
+    changedTouches = document.createTouchList(touch);
+  }
+
+  e.initTouchEvent(type, true, true, window, null, 0, 0, 0, 0, false, false, false, false, touches, targetTouches, changedTouches, 1, 0);
+  target.dispatchEvent(e);
 };
 
 var autocompleteEditor = function () {
@@ -258,18 +307,32 @@ var triggerPaste = function (str) {
 
 var handsontableMethodFactory = function (method) {
   return function () {
-    var instance = spec().$container.handsontable('getInstance');
+
+    var instance;
+    try{
+      instance = spec().$container.handsontable('getInstance');
+    } catch (err) {
+      console.log(err);
+    }
+
     if (!instance) {
       if (method === 'destroy') {
         return; //we can forgive this... maybe it was destroyed in the test
       }
       throw new Error('Something wrong with the test spec: Handsontable instance not found');
+    } else {
+      if (method === 'destroy') {
+        spec().$container.removeData();
+      }
     }
+
     return instance[method].apply(instance, arguments);
   }
 };
 
 var getInstance = handsontableMethodFactory('getInstance');
+var countRows = handsontableMethodFactory('countRows');
+var countCols = handsontableMethodFactory('countCols');
 var selectCell = handsontableMethodFactory('selectCell');
 var deselectCell = handsontableMethodFactory('deselectCell');
 var getSelected = handsontableMethodFactory('getSelected');
@@ -302,6 +365,7 @@ var render = handsontableMethodFactory('render');
 var updateSettings = handsontableMethodFactory('updateSettings');
 var destroy = handsontableMethodFactory('destroy');
 var addHook = handsontableMethodFactory('addHook');
+var getActiveEditor = handsontableMethodFactory('getActiveEditor');
 
 /**
  * Creates 2D array of Excel-like values "A1", "A2", ...

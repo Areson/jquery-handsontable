@@ -4,15 +4,20 @@
  */
 Handsontable.TableView = function (instance) {
   var that = this
-    , $documentElement = $(document.documentElement);
 
+
+  this.eventManager = Handsontable.eventManager(instance);
   this.instance = instance;
   this.settings = instance.getSettings();
 
-  instance.rootElement.data('originalStyle', instance.rootElement[0].getAttribute('style')); //needed to retrieve original style in jsFiddle link generator in HT examples. may be removed in future versions
-  // in IE7 getAttribute('style') returns an object instead of a string, but we only support IE8+
 
-  instance.rootElement.addClass('handsontable');
+  var originalStyle = instance.rootElement.getAttribute('style');
+  if(originalStyle) {
+    instance.rootElement.setAttribute('data-originalstyle', originalStyle); //needed to retrieve original style in jsFiddle link generator in HT examples. may be removed in future versions
+  }
+
+  Handsontable.Dom.addClass(instance.rootElement,'handsontable');
+//  instance.rootElement.addClass('handsontable');
 
   var table = document.createElement('TABLE');
   table.className = 'htCore';
@@ -21,10 +26,12 @@ Handsontable.TableView = function (instance) {
   this.TBODY = document.createElement('TBODY');
   table.appendChild(this.TBODY);
 
-  instance.$table = $(table);
-  instance.container.prepend(instance.$table);
+  instance.table = table;
 
-  instance.rootElement.on('mousedown.handsontable', function (event) {
+
+  instance.container.insertBefore(table, instance.container.firstChild);
+
+  this.eventManager.addEventListener(instance.rootElement,'mousedown', function (event) {
     if (!that.isTextSelectionAllowed(event.target)) {
       clearTextSelection();
       event.preventDefault();
@@ -32,18 +39,18 @@ Handsontable.TableView = function (instance) {
     }
   });
 
-  $documentElement.on('keyup.' + instance.guid, function (event) {
+  this.eventManager.addEventListener(document.documentElement, 'keyup',function (event) {
     if (instance.selection.isInProgress() && !event.shiftKey) {
       instance.selection.finish();
     }
   });
 
   var isMouseDown;
-  this.isMouseDown = function() {
+  this.isMouseDown = function () {
     return isMouseDown;
   };
 
-  $documentElement.on('mouseup.' + instance.guid, function (event) {
+  this.eventManager.addEventListener(document.documentElement, 'mouseup', function (event) {
     if (instance.selection.isInProgress() && event.which === 1) { //is left mouse button
       instance.selection.finish();
     }
@@ -55,7 +62,7 @@ Handsontable.TableView = function (instance) {
     }
   });
 
-  $documentElement.on('mousedown.' + instance.guid, function (event) {
+  this.eventManager.addEventListener(document.documentElement, 'mousedown',function (event) {
     var next = event.target;
 
     if (isMouseDown) {
@@ -67,7 +74,7 @@ Handsontable.TableView = function (instance) {
         if (next === null) {
           return; //click on something that was a row but now is detached (possibly because your click triggered a rerender)
         }
-        if (next === instance.rootElement[0]) {
+       if (next === instance.rootElement) {
           return; //click inside container
         }
         next = next.parentNode;
@@ -84,12 +91,14 @@ Handsontable.TableView = function (instance) {
     }
   });
 
-  instance.$table.on('selectstart', function (event) {
+
+
+  this.eventManager.addEventListener(table, 'selectstart', function (event) {
     if (that.settings.fragmentSelection) {
       return;
     }
 
-    //https://github.com/handsontable/jquery-handsontable/issues/160
+    //https://github.com/handsontable/handsontable/issues/160
     //selectstart is IE only event. Prevent text from being selected when performing drag down in IE8
     event.preventDefault();
   });
@@ -115,7 +124,10 @@ Handsontable.TableView = function (instance) {
         color: '#5292F7',
         //style: 'solid', //not used
         cornerVisible: function () {
-          return that.settings.fillHandle && !that.isCellEdited() && !instance.selection.isMultiple()
+          return that.settings.fillHandle && !that.isCellEdited() && !instance.selection.isMultiple();
+        },
+        multipleSelectionHandlesVisible: function () {
+          return !that.isCellEdited() && !instance.selection.isMultiple();
         }
       }
     }),
@@ -127,6 +139,9 @@ Handsontable.TableView = function (instance) {
         //style: 'solid', // not used
         cornerVisible: function () {
           return that.settings.fillHandle && !that.isCellEdited() && instance.selection.isMultiple()
+        },
+          multipleSelectionHandlesVisible: function () {
+          return !that.isCellEdited() && instance.selection.isMultiple();
         }
       }
     }),
@@ -158,7 +173,6 @@ Handsontable.TableView = function (instance) {
     data: instance.getDataAtCell,
     totalRows: instance.countRows,
     totalColumns: instance.countCols,
-    offsetRow: 0,
     fixedColumnsLeft: function () {
       return that.settings.fixedColumnsLeft;
     },
@@ -167,14 +181,25 @@ Handsontable.TableView = function (instance) {
     },
     renderAllRows: that.settings.renderAllRows,
     rowHeaders: function () {
-      return instance.hasRowHeaders() ? [function (index, TH) {
-        that.appendRowHeader(index, TH);
-      }] : []
+      var arr = [];
+      if(instance.hasRowHeaders()) {
+        arr.push(function (index, TH) {
+          that.appendRowHeader(index, TH);
+        });
+      }
+      Handsontable.hooks.run(instance, 'afterGetRowHeaderRenderers', arr);
+      return arr;
     },
     columnHeaders: function () {
-      return instance.hasColHeaders() ? [function (index, TH) {
-        that.appendColHeader(index, TH);
-      }] : []
+
+      var arr = [];
+      if(instance.hasColHeaders()) {
+        arr.push(function (index, TH) {
+          that.appendColHeader(index, TH);
+        });
+      }
+      Handsontable.hooks.run(instance, 'afterGetColumnHeaderRenderers', arr);
+      return arr;
     },
     columnWidth: instance.getColWidth,
     rowHeight: instance.getRowHeight,
@@ -200,69 +225,82 @@ Handsontable.TableView = function (instance) {
 
       isMouseDown = true;
 
-      if (event.button === 2 && instance.selection.inInSelection(coords)) { //right mouse button
-        //do nothing
-      }
-      else if (event.shiftKey) {
-        if (coords.row >= 0 && coords.col >= 0) {
-          instance.selection.setRangeEnd(coords);
-        }
-        else {
-          if (coords.row < 0 && event.button !== 2) {
-            if(instance.getSelectedType() != 'col') {
-              instance.selection.setRangeStart(new WalkontableCellCoords(0, coords.col), 'col');
-            }
-            instance.selection.setRangeEnd(new WalkontableCellCoords(instance.countRows() - 1, coords.col));
-          }
-          if (coords.col < 0 && event.button !==2) {
-            if(instance.getSelectedType() != 'row') {
-              instance.selection.setRangeStart(new WalkontableCellCoords(coords.row, 0), 'row');
-            }
-            instance.selection.setRangeEnd(new WalkontableCellCoords(coords.row, instance.countCols() - 1));
-          }
-        }
-      }
-      else {
-        if (coords.row < 0 || coords.col < 0) {
-          if (coords.row < 0) {
-            var initialColCoords = new WalkontableCellCoords(0, coords.col);
-            var finalColCoords = new WalkontableCellCoords(instance.countRows() - 1, coords.col);
-            var runSelection = true;
-            if(event.button === 2) {
-              if(instance.selection.inInSelection(initialColCoords) && instance.selection.inInSelection(finalColCoords)) {
-                runSelection = false;
-              }
-            }
+      Handsontable.hooks.run(instance, 'beforeOnCellMouseDown', event, coords, TD);
 
-            if(runSelection) {
-              instance.selection.setRangeStart(initialColCoords, 'col');
-              instance.selection.setRangeEnd(finalColCoords);
-            }
-          }
-          if (coords.col < 0) {
-            var initialRowCoords = new WalkontableCellCoords(coords.row, 0);
-            var finalRowCoords = new WalkontableCellCoords(coords.row, instance.countCols() - 1);
-            var runSelection = true;
-            if(event.button === 2) {
-              if(instance.selection.inInSelection(initialRowCoords) && instance.selection.inInSelection(finalRowCoords)) {
-                runSelection = false;
-              }
-            }
+      Handsontable.Dom.enableImmediatePropagation(event);
 
-            if(runSelection) {
-              instance.selection.setRangeStart(initialRowCoords, 'row');
-              instance.selection.setRangeEnd(finalRowCoords);
+      if (!event.isImmediatePropagationStopped()) {
+
+        // Copy the old cell values as they will get messed with otherwise by "inInSelection"
+        var origCoords = {
+          row: coords.row,
+          col: coords.col
+        };
+
+        if (event.button === 2 && instance.selection.inInSelection(origCoords)) { //right mouse button
+          //do nothing
+        }
+        else if (event.shiftKey) { 
+          if (coords.row >= 0 && coords.col >= 0) {
+            instance.selection.setRangeEnd(coords);
+          }
+          else {
+            if (coords.row < 0 && event.button !== 2) {
+              if(instance.getSelectedType() != 'col') {
+                instance.selection.setRangeStart(new WalkontableCellCoords(0, coords.col), null, 'col');
+              }
+              instance.selection.setRangeEnd(new WalkontableCellCoords(instance.countRows() - 1, coords.col));
+            }
+            if (coords.col < 0 && event.button !==2) {
+              if(instance.getSelectedType() != 'row') {
+                instance.selection.setRangeStart(new WalkontableCellCoords(coords.row, 0), null, 'row');
+              }
+              instance.selection.setRangeEnd(new WalkontableCellCoords(coords.row, instance.countCols() - 1));
             }
           }
         }
         else {
-          instance.selection.setRangeStart(coords);
+          if (coords.row < 0 || coords.col < 0) {
+            if (coords.row < 0) {
+              var initialColCoords = new WalkontableCellCoords(0, coords.col);
+              var finalColCoords = new WalkontableCellCoords(instance.countRows() - 1, coords.col);
+              var runSelection = true;
+              if(event.button === 2) {
+                if(instance.selection.inInSelection(initialColCoords) && instance.selection.inInSelection(finalColCoords)) {
+                  runSelection = false;
+                }
+              }
+
+              if(runSelection) {
+                instance.selection.setRangeStart(initialColCoords, null, 'col');
+                instance.selection.setRangeEnd(finalColCoords);
+              }
+            }
+            if (coords.col < 0) {
+              var initialRowCoords = new WalkontableCellCoords(coords.row, 0);
+              var finalRowCoords = new WalkontableCellCoords(coords.row, instance.countCols() - 1);
+              var runSelection = true;
+              if(event.button === 2) {
+                if(instance.selection.inInSelection(initialRowCoords) && instance.selection.inInSelection(finalRowCoords)) {
+                  runSelection = false;
+                }
+              }
+
+              if(runSelection) {
+                instance.selection.setRangeStart(initialRowCoords, null, 'row');
+                instance.selection.setRangeEnd(finalRowCoords);
+              }
+            }
+          }
+          else {
+            instance.selection.setRangeStart(coords);
+          }
         }
+
+        Handsontable.hooks.run(instance, 'afterOnCellMouseDown', event, coords, TD);
+
+        that.activeWt = that.wt;
       }
-
-      Handsontable.hooks.run(instance, 'afterOnCellMouseDown', event, coords, TD);
-
-      that.activeWt = that.wt;
     },
     /*onCellMouseOut: function (/*event, coords, TD* /) {
      if (isMouseDown && that.settings.fragmentSelection === 'single') {
@@ -279,9 +317,11 @@ Handsontable.TableView = function (instance) {
         }
         else if(selType == 'col' && coords.col >= 0) {
           instance.selection.setRangeEnd(new WalkontableCellCoords(instance.countRows() - 1, coords.col));
+          instance.selection.setSelectedHeaders(false, true);
         }
         else if(selType == 'row' && coords.row >= 0) {
           instance.selection.setRangeEnd(new WalkontableCellCoords(coords.row, instance.countCols() - 1));
+          instance.selection.setSelectedHeaders(true, false);
         }
       }
 
@@ -295,7 +335,7 @@ Handsontable.TableView = function (instance) {
     beforeDraw: function (force) {
       that.beforeRender(force);
     },
-    onDraw: function(force){
+    onDraw: function (force) {
       that.onDraw(force);
     },
     onScrollVertically: function () {
@@ -306,6 +346,19 @@ Handsontable.TableView = function (instance) {
     },
     onBeforeDrawBorders: function (corners, borderClassName) {
       instance.runHooks('beforeDrawBorders', corners, borderClassName);
+    },
+    onBeforeTouchScroll: function () {
+      instance.runHooks('beforeTouchScroll');
+    },
+    onAfterMomentumScroll: function () {
+      instance.runHooks('afterMomentumScroll');
+    },
+    viewportRowCalculatorOverride: function (calc) {
+      if (that.settings.viewportRowRenderingOffset) {
+        calc.renderStartRow = Math.max(calc.renderStartRow - that.settings.viewportRowRenderingOffset, 0);
+        calc.renderEndRow = Math.min(calc.renderEndRow + that.settings.viewportRowRenderingOffset, instance.countRows() - 1);
+      }
+      instance.runHooks('afterViewportRowCalculatorOverride', calc);
     }
   };
 
@@ -314,13 +367,22 @@ Handsontable.TableView = function (instance) {
   this.wt = new Walkontable(walkontableConfig);
   this.activeWt = this.wt;
 
-  $(that.wt.wtTable.spreader).on('mousedown.handsontable, contextmenu.handsontable', function (event) {
+  this.eventManager.addEventListener(that.wt.wtTable.spreader, 'mousedown', function (event) {
     if (event.target === that.wt.wtTable.spreader && event.which === 3) { //right mouse button exactly on spreader means right clickon the right hand side of vertical scrollbar
-      event.stopPropagation();
+      Handsontable.helper.stopPropagation(event);
+      //event.stopPropagation();
     }
   });
 
-  $documentElement.on('click.' + instance.guid, function () {
+  this.eventManager.addEventListener(that.wt.wtTable.spreader, 'contextmenu', function (event) {
+    if (event.target === that.wt.wtTable.spreader && event.which === 3) { //right mouse button exactly on spreader means right clickon the right hand side of vertical scrollbar
+      Handsontable.helper.stopPropagation(event);
+      //event.stopPropagation();
+    }
+  });
+
+
+  this.eventManager.addEventListener(document.documentElement, 'click', function () {
     if (that.settings.observeDOMVisibility) {
       if (that.wt.drawInterrupted) {
         that.instance.forceFullRender = true;
@@ -331,7 +393,7 @@ Handsontable.TableView = function (instance) {
 };
 
 Handsontable.TableView.prototype.isTextSelectionAllowed = function (el) {
-  if ( Handsontable.helper.isInput(el) ) {
+  if (Handsontable.helper.isInput(el)) {
     return (true);
   }
   if (this.settings.fragmentSelection && Handsontable.Dom.isChildOf(el, this.TBODY)) {
@@ -351,7 +413,7 @@ Handsontable.TableView.prototype.beforeRender = function (force) {
   }
 };
 
-Handsontable.TableView.prototype.onDraw = function(force){
+Handsontable.TableView.prototype.onDraw = function (force) {
   if (force) { //force = did Walkontable decide to do full render
     Handsontable.hooks.run(this.instance, 'afterRender', this.instance.forceFullRender); //this.instance.forceFullRender = did Handsontable request full render?
   }
@@ -360,15 +422,17 @@ Handsontable.TableView.prototype.onDraw = function(force){
 Handsontable.TableView.prototype.render = function () {
   this.wt.draw(!this.instance.forceFullRender);
   this.instance.forceFullRender = false;
-  this.instance.rootElement.triggerHandler('render.handsontable');
+//  this.instance.rootElement.triggerHandler('render.handsontable');
 };
 
 /**
  * Returns td object given coordinates
  * @param {WalkontableCellCoords} coords
+ * @param {Boolean} topmost
  */
-Handsontable.TableView.prototype.getCellAtCoords = function (coords) {
-  var td = this.wt.wtTable.getCell(coords);
+Handsontable.TableView.prototype.getCellAtCoords = function (coords, topmost) {
+  var td = this.wt.getCell(coords, topmost);
+  //var td = this.wt.wtTable.getCell(coords);
   if (td < 0) { //there was an exit code (cell is out of bounds)
     return null;
   }
@@ -392,7 +456,7 @@ Handsontable.TableView.prototype.scrollViewport = function (coords) {
  */
 Handsontable.TableView.prototype.appendRowHeader = function (row, TH) {
   var DIV = document.createElement('DIV'),
-      SPAN = document.createElement('SPAN');
+    SPAN = document.createElement('SPAN');
 
   DIV.className = 'relative';
   SPAN.className = 'rowHeader';
@@ -423,7 +487,11 @@ Handsontable.TableView.prototype.appendColHeader = function (col, TH) {
   DIV.className = 'relative';
   SPAN.className = 'colHeader';
 
-  Handsontable.Dom.fastInnerHTML(SPAN, this.instance.getColHeader(col));
+  if (col > -1) {
+    Handsontable.Dom.fastInnerHTML(SPAN, this.instance.getColHeader(col));
+  } else {
+    Handsontable.Dom.fastInnerText(SPAN, '\u00A0');
+  }
   DIV.appendChild(SPAN);
 
   Handsontable.Dom.empty(TH);
@@ -437,7 +505,6 @@ Handsontable.TableView.prototype.appendColHeader = function (col, TH) {
  * @return {Number}
  */
 Handsontable.TableView.prototype.maximumVisibleElementWidth = function (leftOffset) {
-  this.wt.wtScrollbars.horizontal.readWindowSize();
   var workspaceWidth = this.wt.wtViewport.getWorkspaceWidth();
   var maxWidth = workspaceWidth - leftOffset;
   return maxWidth > 0 ? maxWidth : 0;
@@ -449,7 +516,6 @@ Handsontable.TableView.prototype.maximumVisibleElementWidth = function (leftOffs
  * @return {Number}
  */
 Handsontable.TableView.prototype.maximumVisibleElementHeight = function (topOffset) {
-  this.wt.wtScrollbars.vertical.readWindowSize();
   var workspaceHeight = this.wt.wtViewport.getWorkspaceHeight();
   var maxHeight = workspaceHeight - topOffset;
   return maxHeight > 0 ? maxHeight : 0;
@@ -457,4 +523,9 @@ Handsontable.TableView.prototype.maximumVisibleElementHeight = function (topOffs
 
 Handsontable.TableView.prototype.mainViewIsActive = function () {
   return this.wt === this.activeWt;
+};
+
+Handsontable.TableView.prototype.destroy = function () {
+  this.wt.destroy();
+  this.eventManager.clear();
 };

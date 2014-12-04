@@ -17,6 +17,22 @@ WalkontableCellRange.prototype.isSingle = function () {
 };
 
 /**
+ * Returns selected range height (in number of rows)
+ * @returns {number}
+ */
+WalkontableCellRange.prototype.getHeight = function () {
+  return Math.max(this.from.row, this.to.row) - Math.min(this.from.row, this.to.row) + 1;
+};
+
+/**
+ * Returns selected range width (in number of columns)
+ * @returns {number}
+ */
+WalkontableCellRange.prototype.getWidth = function () {
+  return Math.max(this.from.col, this.to.col) - Math.min(this.from.col, this.to.col) + 1;
+};
+
+/**
  * Returns boolean information if given cell coords is within `from` and `to` cell coords of this range
  * @param {WalkontableCellCoords} cellCoords
  * @returns {boolean}
@@ -24,6 +40,15 @@ WalkontableCellRange.prototype.isSingle = function () {
 WalkontableCellRange.prototype.includes = function (cellCoords) {
   var topLeft = this.getTopLeftCorner();
   var bottomRight = this.getBottomRightCorner();
+
+  if (cellCoords.row < 0) {
+    cellCoords.row = 0;
+  }
+
+  if (cellCoords.col < 0) {
+    cellCoords.col = 0;
+  }
+
   return (topLeft.row <= cellCoords.row && bottomRight.row >= cellCoords.row && topLeft.col <= cellCoords.col && bottomRight.col >= cellCoords.col);
 };
 

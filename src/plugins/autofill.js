@@ -15,15 +15,15 @@
     this.instance = instance;
     this.addingStarted = false;
 
-    var $document = $(document),
-      wtOnCellCornerMouseDown,
+    var  wtOnCellCornerMouseDown,
       wtOnCellMouseOver,
       mouseDownOnCellCorner = false,
-      plugin = this;
+      plugin = this,
+      eventManager = Handsontable.eventManager(instance);
 
 
     var mouseUpCallback = function (event) {
-      if(!instance.autofill) {
+      if (!instance.autofill) {
         return true;
       }
 
@@ -36,17 +36,18 @@
       }
     };
 
-    $(document).off('mouseup.autofill.' + instance.guid, this.instance.rootElement).on('mouseup.autofill.' + instance.guid, this.instance.rootElement,  function (event) {
+    eventManager.addEventListener(document, 'mouseup', function (event) {
       mouseUpCallback(event);
     });
 
-    $(document).off('mousemove.moveOutside_' + instance.guid).on('mousemove.moveOutside_' + instance.guid, function (event) {
+    eventManager.addEventListener(document,'mousemove', function (event){
       if (!plugin.instance.autofill) {
         return 0;
       }
 
-      var tableBottom = Handsontable.Dom.offset(plugin.instance.$table[0]).top - (window.pageYOffset || document.documentElement.scrollTop) + Handsontable.Dom.outerHeight(plugin.instance.$table[0])
-        , tableRight = Handsontable.Dom.offset(plugin.instance.$table[0]).left - (window.pageXOffset || document.documentElement.scrollLeft) + Handsontable.Dom.outerWidth(plugin.instance.$table[0]);
+      var tableBottom = Handsontable.Dom.offset(plugin.instance.table).top - (window.pageYOffset || document.documentElement.scrollTop) + Handsontable.Dom.outerHeight(plugin.instance.table)
+        , tableRight = Handsontable.Dom.offset(plugin.instance.table).left - (window.pageXOffset || document.documentElement.scrollLeft) + Handsontable.Dom.outerWidth(plugin.instance.table);
+
 
       if (plugin.addingStarted === false && plugin.instance.autofill.handle.isDragged > 0 && event.clientY > tableBottom && event.clientX <= tableRight) { // dragged outside bottom
         this.mouseDragOutside = true;
@@ -151,6 +152,49 @@
         return;
       }
 
+      var getDeltas = function (start, end, data, direction) {
+        var rlength = data.length, // rows
+            clength = data ? data[0].length : 0; // cols
+
+        var deltas = [];
+
+        var diffRow = end.row - start.row,
+            diffCol = end.col - start.col;
+
+        var startValue, endValue, delta;
+
+        var arr = [];
+
+        if (['down', 'up'].indexOf(direction) !== -1) {
+          for (var col = 0; col <= diffCol; col++) {
+
+            startValue = parseInt(data[0][col], 10);
+            endValue = parseInt(data[rlength-1][col], 10);
+            delta = (direction === 'down' ? (endValue - startValue) : (startValue - endValue))  / (rlength - 1) || 0;
+
+            arr.push(delta);
+          }
+
+          deltas.push(arr);
+        }
+
+        if (['right', 'left'].indexOf(direction) !== -1) {
+          for (var row = 0; row <= diffRow; row++) {
+
+            startValue = parseInt(data[row][0], 10);
+            endValue = parseInt(data[row][clength-1], 10);
+            delta = (direction === 'right' ? (endValue - startValue) : (startValue - endValue)) / (clength - 1) || 0;
+
+            arr = [];
+            arr.push(delta);
+
+            deltas.push(arr);
+          }
+        }
+
+        return deltas;
+      };
+
       this.instance.view.wt.selections.fill.clear();
 
       if (this.instance.selection.isMultiple()) {
@@ -160,7 +204,11 @@
         select = this.instance.view.wt.selections.current.getCorners();
       }
 
+      var direction;
+
       if (drag[0] === select[0] && drag[1] < select[1]) {
+        direction = 'left';
+
         start = new WalkontableCellCoords(
           drag[0],
           drag[1]
@@ -171,9 +219,11 @@
         );
       }
       else if (drag[0] === select[0] && drag[3] > select[3]) {
+        direction = 'right';
+
         start = new WalkontableCellCoords(
           drag[0],
-            select[3] + 1
+          select[3] + 1
         );
         end = new WalkontableCellCoords(
           drag[2],
@@ -181,18 +231,22 @@
         );
       }
       else if (drag[0] < select[0] && drag[1] === select[1]) {
+        direction = 'up';
+
         start = new WalkontableCellCoords(
           drag[0],
           drag[1]
         );
         end = new WalkontableCellCoords(
-            select[0] - 1,
+          select[0] - 1,
           drag[3]
         );
       }
       else if (drag[2] > select[2] && drag[1] === select[1]) {
+        direction = 'down';
+
         start = new WalkontableCellCoords(
-            select[2] + 1,
+          select[2] + 1,
           drag[1]
         );
         end = new WalkontableCellCoords(
@@ -201,22 +255,23 @@
         );
       }
 
-      if (start) {
+      if (start && start.row > -1 && start.col > -1) {
         var selRange = {from: this.instance.getSelectedRange().from, to: this.instance.getSelectedRange().to};
 
         _data = this.instance.getData(selRange.from.row, selRange.from.col, selRange.to.row, selRange.to.col);
 
+        var deltas = getDeltas(start, end, _data, direction);
+
         Handsontable.hooks.run(this.instance, 'beforeAutofill', start, end, _data);
 
-        this.instance.populateFromArray(start.row, start.col, _data, end.row, end.col, 'autofill');
+        this.instance.populateFromArray(start.row, start.col, _data, end.row, end.col, 'autofill', null, direction, deltas);
 
         this.instance.selection.setRangeStart(new WalkontableCellCoords(drag[0], drag[1]));
         this.instance.selection.setRangeEnd(new WalkontableCellCoords(drag[2], drag[3]));
-      }
-      /*else {
+      } else {
        //reset to avoid some range bug
-       selection.refreshBorders();
-       }*/
+       this.instance.selection.refreshBorders();
+     }
     },
 
   /**
@@ -241,17 +296,19 @@
       this.instance.view.wt.selections.fill.add(this.instance.getSelectedRange().to);
       this.instance.view.wt.selections.fill.add(coords);
       this.instance.view.render();
-    }
+    };
 
   Autofill.prototype.checkIfNewRowNeeded = function () {
     var fillCorners,
+      selection,
       tableRows = this.instance.countRows(),
       that = this;
 
     if (this.instance.view.wt.selections.fill.cellRange && this.addingStarted === false) {
+      selection = this.instance.getSelected();
       fillCorners = this.instance.view.wt.selections.fill.getCorners();
 
-      if (fillCorners[2] === tableRows - 1) {
+      if (selection[2] < tableRows - 1 && fillCorners[2] === tableRows - 1) {
         this.addingStarted = true;
 
         this.instance._registerTimeout(setTimeout(function () {

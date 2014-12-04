@@ -13,7 +13,6 @@ function WalkontableSettings(instance, settings) {
 
     //data source
     data: void 0,
-    offsetRow: 0,
     fixedColumnsLeft: 0,
     fixedRowsTop: 0,
     rowHeaders: function () {
@@ -24,21 +23,20 @@ function WalkontableSettings(instance, settings) {
     }, //this must be array of functions: [function (column, TH) {}]
     totalRows: void 0,
     totalColumns: void 0,
-    width: null,
-    height: null,
     cellRenderer: function (row, column, TD) {
       var cellData = that.getSetting('data', row, column);
       Handsontable.Dom.fastInnerText(TD, cellData === void 0 || cellData === null ? '' : cellData);
     },
     columnWidth: 50,
     rowHeight: function (row) {
-      return 23;
+      return; //return undefined means use default size for the rendered cell content
     },
     rowHeightCache: [],
     ignoreRowHeightCache: false,
     defaultRowHeight: 23,
     selections: null,
     hideBorderOnMouseDownOver: false,
+    viewportRowCalculatorOverride: null,
 
     //callbacks
     onCellMouseDown: null,
@@ -52,12 +50,15 @@ function WalkontableSettings(instance, settings) {
     onBeforeDrawBorders: null,
     onScrollVertically: null,
     onScrollHorizontally: null,
+    onBeforeTouchScroll: null,
+    onAfterMomentumScroll: null,
 
     //constants
     scrollbarWidth: 10,
     scrollbarHeight: 10,
 
-    renderAllRows: false
+    renderAllRows: false,
+    groups: false
   };
 
   //reference to settings
@@ -109,7 +110,7 @@ WalkontableSettings.prototype.update = function (settings, value) {
 
 WalkontableSettings.prototype.getSetting = function (key, param1, param2, param3, param4) {
   if (typeof this.settings[key] === 'function') {
-    return this.settings[key](param1, param2, param3, param4); //this is faster than .apply - https://github.com/handsontable/jquery-handsontable/wiki/JavaScript-&-DOM-performance-tips
+    return this.settings[key](param1, param2, param3, param4); //this is faster than .apply - https://github.com/handsontable/handsontable/wiki/JavaScript-&-DOM-performance-tips
   }
   else if (param1 !== void 0 && Object.prototype.toString.call(this.settings[key]) === '[object Array]') { //perhaps this can be removed, it is only used in tests
     return this.settings[key][param1];

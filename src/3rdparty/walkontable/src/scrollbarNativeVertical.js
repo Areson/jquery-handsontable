@@ -1,9 +1,6 @@
 function WalkontableVerticalScrollbarNative(instance) {
   this.instance = instance;
   this.type = 'vertical';
-  this.cellSize = this.instance.wtSettings.settings.defaultRowHeight;
-  this.offset;
-  this.total;
   this.init();
   this.clone = this.makeClone('top');
 }
@@ -20,19 +17,24 @@ WalkontableVerticalScrollbarNative.prototype.resetFixedPosition = function () {
   if (this.scrollHandler === window) {
     var box = this.instance.wtTable.holder.getBoundingClientRect();
     var top = Math.ceil(box.top);
+    var finalLeft
+      , finalTop;
+    var bottom = Math.ceil(box.bottom);
 
-    elem.style.left = '0';
+    finalLeft = '0';
 
-    if (top < 0) {
-      elem.style.top = -top + "px";
+    if (top < 0 && (bottom - elem.offsetHeight) > 0) {
+      finalTop = -top + "px";
     } else {
-      elem.style.top = "0";
+      finalTop = "0";
     }
   }
-  else {
-    elem.style.top = this.windowScrollPosition + "px";
-    elem.style.left = '0';
+  else if(!Handsontable.freezeOverlays) {
+    finalTop = this.getScrollPosition() + "px";
+    finalLeft = '0';
   }
+
+  Handsontable.Dom.setOverlayPosition(elem, finalLeft, finalTop);
 
   if (this.instance.wtScrollbars.horizontal.scrollHandler === window) {
     elem.style.width = this.instance.wtViewport.getWorkspaceActualWidth() + 'px';
@@ -57,9 +59,8 @@ WalkontableVerticalScrollbarNative.prototype.setScrollPosition = function (pos) 
 };
 
 WalkontableVerticalScrollbarNative.prototype.onScroll = function () {
-  WalkontableOverlay.prototype.onScroll.call(this);
-
   this.clone.ignoreColumnHeaders = this.instance.ignoreColumnHeaders = true;
+  this.readSettings(); //read window scroll position
   this.instance.draw(true);//
   this.clone.ignoreColumnHeaders = this.instance.ignoreColumnHeaders = false;
 
@@ -67,13 +68,13 @@ WalkontableVerticalScrollbarNative.prototype.onScroll = function () {
 };
 
 WalkontableVerticalScrollbarNative.prototype.getLastCell = function () {
-  return this.instance.getSetting('offsetRow') + this.instance.wtTable.tbodyChildrenLength - 1;
+  return this.instance.wtViewport.rowsPreCalculator.renderEndRow;
 };
 
 WalkontableVerticalScrollbarNative.prototype.sumCellSizes = function (from, length) {
   var sum = 0;
   while (from < length) {
-    sum += this.instance.wtSettings.settings.rowHeight(from) || this.instance.wtSettings.settings.defaultRowHeight; //TODO optimize getSetting, because this is MUCH faster then getSetting
+    sum += this.instance.wtTable.getRowHeight(from) || this.instance.wtSettings.settings.defaultRowHeight; //TODO optimize getSetting, because this is MUCH faster then getSetting
     from++;
   }
   return sum;
@@ -86,57 +87,48 @@ WalkontableVerticalScrollbarNative.prototype.refresh = function (selectionsOnly)
 
 //applyToDOM (in future merge it with this.refresh?)
 WalkontableVerticalScrollbarNative.prototype.applyToDOM = function () {
-  var last = this.getLastCell();
-  this.measureBefore = this.sumCellSizes(0, this.offset);
-  if (last === -1) { //last -1 means that viewport is scrolled behind the table
-    this.measureAfter = 0;
+  var total = this.instance.getSetting('totalRows');
+  var headerSize = this.instance.wtViewport.getColumnHeaderHeight();
+  this.fixedContainer.style.height = headerSize + this.sumCellSizes(0, total) + 4 + 'px'; //+4 is needed, otherwise vertical scroll appears in Chrome (window scroll mode) - maybe because of fill handle in last row or because of box shadow
+  if (typeof this.instance.wtViewport.rowsCalculator.renderStartPosition === 'number') {
+    this.fixed.style.top = this.instance.wtViewport.rowsCalculator.renderStartPosition + 'px';
+  }
+  else if (total === 0) {
+    this.fixed.style.top = '0'; //can happen if there are 0 rows
   }
   else {
-    this.measureAfter = this.sumCellSizes(last, this.total - last);
+    throw new Error("Incorrect value of the rowCalculator");
   }
-  var headerSize = this.instance.wtViewport.getColumnHeaderHeight();
-  this.fixedContainer.style.height = headerSize + this.sumCellSizes(0, this.total) + 4 + 'px'; //+4 is needed, otherwise vertical scroll appears in Chrome (window scroll mode) - maybe because of fill handle in last row or because of box shadow
-  this.fixed.style.top = this.measureBefore + 'px';
   this.fixed.style.bottom = '';
 };
 
-WalkontableVerticalScrollbarNative.prototype.scrollTo = function (cell) {
-  var newY = this.tableParentOffset + cell * this.cellSize;
-  this.setScrollPosition(newY);
-  this.onScroll();
-};
-
-WalkontableVerticalScrollbarNative.prototype.readWindowSize = function () {
-  if (this.scrollHandler === window) {
-    this.windowSize = document.documentElement.clientHeight;
-    this.tableParentOffset = this.instance.wtTable.holderOffset.top;
+/**
+ * Scrolls vertically to a row
+ * @param sourceRow {Number}
+ * @param bottomEdge {Boolean} if TRUE, scrolls according to the bottom edge (top edge is by default)
+ */
+WalkontableVerticalScrollbarNative.prototype.scrollTo = function (sourceRow, bottomEdge) {
+  var newY = this.getTableParentOffset();
+  if (bottomEdge) {
+    newY += this.sumCellSizes(0, sourceRow + 1);
+    newY -= this.instance.wtViewport.getViewportHeight();
   }
   else {
-    var elemHeight = Handsontable.Dom.outerHeight(this.scrollHandler);
-    this.windowSize = elemHeight > 0 && this.scrollHandler.clientHeight > 0 ? this.scrollHandler.clientHeight : Infinity; //returns height without DIV scrollbar
-    this.tableParentOffset = 0;
+    newY += this.sumCellSizes(0, sourceRow);
   }
-  this.windowScrollPosition = this.getScrollPosition();
+
+  this.setScrollPosition(newY);
+};
+
+WalkontableVerticalScrollbarNative.prototype.getTableParentOffset = function () {
+  if (this.scrollHandler === window) {
+    return this.instance.wtTable.holderOffset.top;
+  }
+  else {
+    return 0;
+  }
 };
 
 WalkontableVerticalScrollbarNative.prototype.readSettings = function () {
-  this.readWindowSize();
-
-  this.offset = this.instance.getSetting('offsetRow');
-  this.total = this.instance.getSetting('totalRows');
-
-  var scrollDelta = this.windowScrollPosition - this.tableParentOffset;
-
-  var sum = 0;
-  var last;
-  for (var i = 0; i < this.total; i++) {
-    last = this.instance.getSetting('rowHeight', i) || this.instance.wtSettings.settings.defaultRowHeight;
-    sum += last;
-    if (sum - 1 > scrollDelta) {
-      break;
-    }
-  }
-
-  this.offset = Math.min(i, this.total);
-  this.instance.update('offsetRow', this.offset);
+  //throw new Error("not here")
 };

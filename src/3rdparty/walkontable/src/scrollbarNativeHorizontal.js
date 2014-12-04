@@ -16,22 +16,27 @@ WalkontableHorizontalScrollbarNative.prototype.resetFixedPosition = function () 
   }
   var elem = this.clone.wtTable.holder.parentNode;
 
-	if (this.scrollHandler === window) {
+  if (this.scrollHandler === window) {
+
     var box = this.instance.wtTable.holder.getBoundingClientRect();
     var left = Math.ceil(box.left);
+    var finalLeft
+      , finalTop;
 
-    if (left < 0) {
-      elem.style.left = -left + 'px';
+    if (left < 0 && (left + Handsontable.Dom.outerWidth(this.instance.wtTable.TABLE)) > 0) {
+      finalLeft = -left + 'px';
     } else {
-      elem.style.left = '0';
+      finalLeft = '0';
     }
 
-    elem.style.top = this.instance.wtTable.hider.style.top;
+    finalTop = this.instance.wtTable.hider.style.top;
   }
-  else {
-    elem.style.top = this.instance.wtTable.hider.style.top;
-    elem.style.left = this.windowScrollPosition + "px";
+  else if(!Handsontable.freezeOverlays) {
+    finalLeft = this.getScrollPosition() + "px";
+    finalTop = this.instance.wtTable.hider.style.top;
   }
+
+  Handsontable.Dom.setOverlayPosition(elem, finalLeft, finalTop);
 
   elem.style.height = Handsontable.Dom.outerHeight(this.clone.wtTable.TABLE) + 'px';
   elem.style.width = Handsontable.Dom.outerWidth(this.clone.wtTable.TABLE) + 4 + 'px';
@@ -46,7 +51,7 @@ WalkontableHorizontalScrollbarNative.prototype.getScrollPosition = function () {
 };
 
 WalkontableHorizontalScrollbarNative.prototype.setScrollPosition = function (pos) {
-  if (this.scrollHandler === window){
+  if (this.scrollHandler === window) {
     window.scrollTo(pos, Handsontable.Dom.getWindowScrollTop());
   } else {
     this.scrollHandler.scrollLeft = pos;
@@ -54,8 +59,7 @@ WalkontableHorizontalScrollbarNative.prototype.setScrollPosition = function (pos
 };
 
 WalkontableHorizontalScrollbarNative.prototype.onScroll = function () {
-  WalkontableOverlay.prototype.onScroll.call(this);
-
+  this.readSettings(); //read window scroll position
   this.instance.getSetting('onScrollHorizontally');
 };
 
@@ -65,26 +69,25 @@ WalkontableHorizontalScrollbarNative.prototype.getLastCell = function () {
 
 //applyToDOM (in future merge it with this.refresh?)
 WalkontableHorizontalScrollbarNative.prototype.applyToDOM = function () {
-  this.readWindowSize();
 };
 
-WalkontableHorizontalScrollbarNative.prototype.scrollTo = function (cell) {
-  this.setScrollPosition(this.tableParentOffset + cell * this.cellSize);
+/**
+ * Scrolls horizontally to a column at the left edge of the viewport
+ * @param sourceCol {Number}
+ */
+WalkontableHorizontalScrollbarNative.prototype.scrollTo = function (sourceCol) {
+  this.setScrollPosition(this.getTableParentOffset() + sourceCol * this.cellSize);
 };
 
-WalkontableHorizontalScrollbarNative.prototype.readWindowSize = function () {
+WalkontableHorizontalScrollbarNative.prototype.getTableParentOffset = function () {
   if (this.scrollHandler === window) {
-    this.windowSize = document.documentElement.clientWidth;
-    this.tableParentOffset = this.instance.wtTable.holderOffset.left;
+    return this.instance.wtTable.holderOffset.left;
   }
   else {
-    this.windowSize = this.scrollHandler.clientWidth;
-    this.tableParentOffset = 0;
+    return 0;
   }
-  this.windowScrollPosition = this.getScrollPosition();
 };
 
 WalkontableHorizontalScrollbarNative.prototype.readSettings = function () {
-  this.readWindowSize();
   this.total = this.instance.getSetting('totalColumns');
 };

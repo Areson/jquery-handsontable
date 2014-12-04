@@ -16,6 +16,8 @@ Handsontable.PluginHookClass = (function () {
       beforeGetCellMeta: [],
       beforeAutofill: [],
       beforeKeyDown: [],
+      beforeOnCellMouseDown: [],
+      beforeTouchScroll: [],
       afterInit : [],
       afterLoadData : [],
       afterUpdateSettings: [],
@@ -45,6 +47,7 @@ Handsontable.PluginHookClass = (function () {
       afterCellMetaReset: [],
       afterIsMultipleSelectionCheck: [],
       afterDocumentKeyDown: [],
+      afterMomentumScroll: [],
 
       // Modifiers
       modifyColWidth: [],
