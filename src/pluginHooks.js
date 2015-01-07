@@ -53,7 +53,11 @@ Handsontable.PluginHookClass = (function () {
       modifyColWidth: [],
       modifyRowHeight: [],
       modifyRow: [],
-      modifyCol: []
+      modifyCol: [],
+
+      // Hook Tracking
+      beforeHook: [],
+      afterHook: []
     }
   };
 
@@ -165,8 +169,18 @@ Handsontable.PluginHookClass = (function () {
       key = legacy[key];
     }
 
+    // Hook tracking
+    if(key !== 'beforeHook' && key !== 'afterHook') {
+      this.run(instance, 'beforeHook', key);
+    }
+
     this._runBucket(this.globalBucket, instance, key, p1, p2, p3, p4, p5, p6);
     this._runBucket(this.getBucket(instance), instance, key, p1, p2, p3, p4, p5, p6);
+
+    // Hook tracking
+    if(key !== 'beforeHook' && key !== 'afterHook') {
+      this.run(instance, 'afterHook', key);
+    }
   };
 
   PluginHookClass.prototype._runBucket = function (bucket, instance, key, p1, p2, p3, p4, p5, p6) {
@@ -201,8 +215,19 @@ Handsontable.PluginHookClass = (function () {
       key = legacy[key];
     }
 
+    // Hook tracking
+    if(key !== 'beforeHook' && key !== 'afterHook') {
+      this.run(instance, 'beforeHook', key);
+    }
+
     p1 = this._executeBucket(this.globalBucket, instance, key, p1, p2, p3, p4, p5, p6);
     p1 = this._executeBucket(this.getBucket(instance), instance, key, p1, p2, p3, p4, p5, p6);
+
+    // Hook tracking
+    if(key !== 'beforeHook' && key !== 'afterHook') {
+      this.run(instance, 'afterHook', key);
+    }
+    
     return p1;
   };
 
