@@ -35,7 +35,7 @@
     };
 
     this.clear = function() {
-      currentQueueObject = new QueueObject;
+      currentQueueObject = new QueueObject();
       list = [currentQueueObject];
       self.count = 0;
     };
