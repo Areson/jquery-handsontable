@@ -1,7 +1,65 @@
 /**
  * Handsontable UndoRedo class
  */
-(function(Handsontable){  
+(function(Handsontable){
+  var ActionQueue = function() {
+    var QueueObject = function() {
+      var self = this;
+      this.queue = [[], [], []];
+      this.count = 0;
+
+      this.add = function(item, priority) {
+        self.queue[priority].push(item);
+        self.count++;
+      };
+
+      return this;
+    };
+
+    var self = this;      
+    var list = [];
+    var currentQueueObject = null;
+    this.count = 0;
+
+    this.newQueue = function() {
+      if(currentQueueObject === null || currentQueueObject.count > 0) {
+        currentQueueObject = new QueueObject();
+        list.push(currentQueueObject);
+      }
+    };
+
+    this.add = function(item, priority) {
+      currentQueueObject.add(item, priority);
+      self.count++;
+    };
+
+    this.clear = function() {
+      currentQueueObject = null;
+      list = [];
+      self.count = 0;
+    };
+
+    this.getActions = function() {
+      var actions = [];
+
+      for(var i = 0; i < list.length; i++) {
+        var queue = list[i];
+
+        for(var j = 0; queue.count > 0 && j < queue.queue.length; j++) {
+          var items = queue.queue[j];
+
+          for(var k = 0; k < items.length; k++) {
+            actions.push(items[k]);
+          }
+        }
+      }
+
+      return actions;
+    };
+
+    return this;
+  };
+
   Handsontable.UndoRedo = function (instance) {
     var plugin = this;
     this.instance = instance;
@@ -9,8 +67,7 @@
     this.undoneActions = [];
     this.ignoreNewActions = false;
     this.collectActions = false;
-    this.collectedActions = [[], [], []];
-    this.collectedActionsCount = 0;
+    this.collectedActions = new ActionQueue();
 
     // Track plugins that have fired
     this.hookStack = [];
@@ -26,20 +83,22 @@
       "afterFilter": true,
       "afterColumnSort": true,
       // These don't have undo handlers, but start collection to capture user events
-      "beforeChange": true
+      "beforeChange": true,
+      // This is an entry for when users manually kick off collection
+      "_manualCollection": true
     };
 
     this.chainedHooks = {
       "beforeChange": "afterChange"
-    };
+    };  
 
-    instance.addHook("beforeHook", function(hook) {
+    this.beforeHookHandler = function(hook) {
       if(!plugin.ignoreNewActions && plugin.supportedHooks[hook]) {
         if(plugin.hookStack.length == 0 && plugin.chainStack.length == 0) {
           plugin.collectUndo(true);
         }
         
-        plugin.hookStack.push(hook);
+        plugin.hookStack.push(hook);        
 
         // Pop any chain stack items that match this one
         if(plugin.chainStack[plugin.chainStack.length - 1] == hook) {
@@ -51,12 +110,14 @@
           plugin.chainStack.push(plugin.chainedHooks[hook]);
         }
       }
-    });
+    };
 
-    instance.addHook("afterHook", function(hook) {
+    this.afterHookHandler = function(hook) {
       if(!plugin.ignoreNewActions && plugin.supportedHooks[hook] && plugin.hookStack.length > 0) {
+        var hadRemoval = false;
         if(plugin.hookStack[plugin.hookStack.length - 1] == hook) {
           plugin.hookStack.pop();
+          hadRemoval = true;          
         }
         else {
           plugin.removalStack.push(key);
@@ -65,6 +126,11 @@
         while(plugin.removalStack.length > 0 && plugin.hookStack.length > 0 && plugin.removalStack[plugin.removalStack.length - 1] == plugin.hookStack[plugin.hookStack.length - 1]) {
           plugin.removalStack.pop();
           plugin.hookStack.pop();
+          hadRemoval = true;          
+        }
+
+        if(hadRemoval) {
+          plugin.collectedActions.newQueue();
         }
 
         if(plugin.hookStack.length == 0 && plugin.chainStack.length == 0) {
@@ -72,7 +138,11 @@
           plugin.collectUndo(false);
         }
       }
-    });
+    }
+
+    instance.addHook("beforeHook", this.beforeHookHandler);
+
+    instance.addHook("afterHook", this.afterHookHandler);
 
     // Hook into events that we can handle
     instance.addHook("afterChange", function (changes, origin) {
@@ -147,26 +217,13 @@
   Handsontable.UndoRedo.LOW = 0;
   Handsontable.UndoRedo.NORMAL = 1;
   Handsontable.UndoRedo.HIGH = 2;
-
-  var convertCollectedActions = function(collectedActions) {
-    var actions = [];
-
-    for(var i = 0; i < collectedActions.length; i++) {
-      var items = collectedActions[i];
-
-      for(var j = 0; j < items.length; j++) {
-        actions.push(items[j]);
-      }
-    }
-    
-    return actions;
-  };
-
+  
   Handsontable.UndoRedo.prototype.collectUndo = function(enableCollection) {    
     this.collectActions = enableCollection;
 
-    if(!this.collectActions && this.collectedActionsCount > 0) {
-      var actions = convertCollectedActions(this.collectedActions);
+    if(!this.collectActions && this.collectedActions.count > 0) {
+      var actions = this.collectedActions.getActions();          
+      
       if(actions.length > 1) {
         this.done(new Handsontable.UndoRedo.CollectionAction(actions));
       }
@@ -174,8 +231,7 @@
         this.done(actions[0]);
       }
       
-      this.collectedActions = [[], [], []];
-      this.collectedActionsCount = 0;
+      this.collectedActions.clear();
     }
   };
 
@@ -187,8 +243,7 @@
       }
       else {
         priority = (priority === null || priority === undefined ? Handsontable.UndoRedo.NORMAL : priority);
-        this.collectedActions[priority].push(action);
-        this.collectedActionsCount++;
+        this.collectedActions.add(action, priority);        
       }
 
       Handsontable.hooks.run(this.instance, 'undoRedoState', 'undo', this.isUndoAvailable());
@@ -261,8 +316,7 @@
     this.hookStack.length = 0;
     this.removalStack.length = 0;
     this.chainStack.length = 0;
-    this.collectedActions = [[], [], []];
-    this.collectedActionsCount = 0;
+    this.collectedActions.clear();
 
     Handsontable.hooks.run(this.instance, 'undoRedoState', 'undo', false);
     Handsontable.hooks.run(this.instance, 'undoRedoState', 'redo', false);
@@ -398,7 +452,15 @@
   Handsontable.helper.inherit(Handsontable.UndoRedo.CreateDataRowAction, Handsontable.UndoRedo.Action);
   Handsontable.UndoRedo.CreateDataRowAction.prototype.redo = function (instance, undoneCallback) {
     var spliceArgs = [this.index, 0];
-    Array.prototype.push.apply(spliceArgs, this.data);
+    var spliceData = [];
+
+    for(var i = 0; i < this.data.length; i++) {
+      var spliceObject = {};
+      Handsontable.helper.deepExtend(spliceObject, this.data[i])
+      spliceData.push(spliceObject);
+    }
+
+    Array.prototype.push.apply(spliceArgs, spliceData);
 
     Array.prototype.splice.apply(instance.getData(), spliceArgs);
 
@@ -671,7 +733,12 @@
     };
 
     instance.collectUndo = function(enabledCollection) {
-      return instance.undoRedo.collectUndo(enabledCollection);
+      if(enabledCollection) {
+        instance.undoRedo.beforeHookHandler('_manualCollection');
+      }
+      else {
+        instance.undoRedo.afterHookHandler('_manualCollection');
+      }      
     }
   }
 
