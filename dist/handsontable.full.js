@@ -6,7 +6,7 @@
  * Licensed under the MIT license.
  * http://handsontable.com/
  *
- * Date: Thu Jan 15 2015 10:22:24 GMT-0800 (Pacific Standard Time)
+ * Date: Thu Jan 15 2015 14:09:58 GMT-0800 (Pacific Standard Time)
  */
 /*jslint white: true, browser: true, plusplus: true, indent: 4, maxerr: 50 */
 
@@ -11681,9 +11681,10 @@ function Storage(prefix) {
       return this;
     };
 
-    var self = this;      
-    var list = [];
-    var currentQueueObject = null;
+    var self = this; 
+    var currentQueueObject = new QueueObject();   
+    var list = [currentQueueObject];
+    
     this.count = 0;
 
     this.newQueue = function() {
@@ -11699,8 +11700,8 @@ function Storage(prefix) {
     };
 
     this.clear = function() {
-      currentQueueObject = null;
-      list = [];
+      currentQueueObject = new QueueObject();
+      list = [currentQueueObject];
       self.count = 0;
     };
 
