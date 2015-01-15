@@ -16,9 +16,10 @@
       return this;
     };
 
-    var self = this;      
-    var list = [];
-    var currentQueueObject = null;
+    var self = this; 
+    var currentQueueObject = new QueueObject();   
+    var list = [currentQueueObject];
+    
     this.count = 0;
 
     this.newQueue = function() {
@@ -34,8 +35,8 @@
     };
 
     this.clear = function() {
-      currentQueueObject = null;
-      list = [];
+      currentQueueObject = new QueueObject;
+      list = [currentQueueObject];
       self.count = 0;
     };
 
