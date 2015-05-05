@@ -291,26 +291,29 @@ WalkontableBorder.prototype.appear = function (corners) {
     isMultiple = (fromRow !== toRow || fromColumn !== toColumn);
     fromTD = instance.wtTable.getCell(new WalkontableCellCoords(fromRow, fromColumn));
     toTD = isMultiple ? instance.wtTable.getCell(new WalkontableCellCoords(toRow, toColumn)) : fromTD;
-    fromOffset = Handsontable.Dom.offset(fromTD);
-    toOffset = isMultiple ? Handsontable.Dom.offset(toTD) : fromOffset;
-    containerOffset = Handsontable.Dom.offset(instance.wtTable.TABLE);
 
-    minTop = fromOffset.top;
-    height = toOffset.top + Handsontable.Dom.outerHeight(toTD) - minTop;
-    minLeft = fromOffset.left;
-    width = toOffset.left + Handsontable.Dom.outerWidth(toTD) - minLeft;
+    if(fromTD !== -1 && fromTD !== -2) {
+      fromOffset = Handsontable.Dom.offset(fromTD);
+      toOffset = isMultiple ? Handsontable.Dom.offset(toTD) : fromOffset;
+      containerOffset = Handsontable.Dom.offset(instance.wtTable.TABLE);
 
-    top = minTop - containerOffset.top - 1;
-    left = minLeft - containerOffset.left - 1;
+      minTop = fromOffset.top;
+      height = toOffset.top + Handsontable.Dom.outerHeight(toTD) - minTop;
+      minLeft = fromOffset.left;
+      width = toOffset.left + Handsontable.Dom.outerWidth(toTD) - minLeft;
 
-    var style = Handsontable.Dom.getComputedStyle(fromTD);
-    if (parseInt(style['borderTopWidth'], 10) > 0) {
-      top += 1;
-      height = height > 0 ? height - 1 : 0;
-    }
-    if (parseInt(style['borderLeftWidth'], 10) > 0) {
-      left += 1;
-      width = width > 0 ? width - 1 : 0;
+      top = minTop - containerOffset.top - 1;
+      left = minLeft - containerOffset.left - 1;
+
+      var style = Handsontable.Dom.getComputedStyle(fromTD);
+      if (parseInt(style['borderTopWidth'], 10) > 0) {
+        top += 1;
+        height = height > 0 ? height - 1 : 0;
+      }
+      if (parseInt(style['borderLeftWidth'], 10) > 0) {
+        left += 1;
+        width = width > 0 ? width - 1 : 0;
+      }
     }
   }
   else {

@@ -828,6 +828,25 @@ Handsontable.Core = function (rootElement, userSettings) {
     Handsontable.hooks.run(instance, 'afterChange', changes, source || 'edit');
   }
 
+  this.validateSourceRow = function(row, callback) {
+    var countCols = this.countCols();
+    var data = this.getSettings().data[row];
+
+    var validatedCount = 0;
+    var _fn = function() {
+      validatedCount++;
+
+      if(validatedCount == countCols) {
+        callback();
+      }
+    };
+
+    for(var i = 0; i < countCols; i++) {
+      var meta = this.getSourceCellMeta(row, i)
+      this.validateCell(data[meta.prop], meta, _fn, "validateSourceRow");
+    }
+  };
+
   this.validateCell = function (value, cellProperties, callback, source) {
     var validator = instance.getCellValidator(cellProperties);
 
@@ -846,9 +865,10 @@ Handsontable.Core = function (rootElement, userSettings) {
       // To provide consistent behaviour, validation should be always asynchronous
       instance._registerTimeout(setTimeout(function () {
         validator.call(cellProperties, value, function (valid) {
+          var priorState = cellProperties.valid;
           cellProperties.valid = valid;
 
-          valid = Handsontable.hooks.execute(instance, "afterValidate", valid, value, cellProperties.row, cellProperties.prop, source);
+          valid = Handsontable.hooks.execute(instance, "afterValidate", valid, value, cellProperties.row, cellProperties.prop, source, priorState);
 
           callback(valid);
         });
@@ -857,11 +877,11 @@ Handsontable.Core = function (rootElement, userSettings) {
       }, 0));
     } else { //resolve callback even if validator function was not found
       cellProperties.valid = true;
-      callback(true);
+      // This should also be asynchronous to mirror normal validators
+      instance._registerTimeout(setTimeout(function() {
+        callback(true);  
+      }, 0));      
     }
-
-
-
   };
 
   function setDataInputToArray(row, prop_or_col, value) {
@@ -1061,10 +1081,42 @@ Handsontable.Core = function (rootElement, userSettings) {
   }
 
   /**
+   * Allows rendering to be paused if multiple changes that would kick of renders would
+   * be run in rapid succession
+   */
+  var renderHalted = false;
+  var forceNextRender = false;
+  var needRender = false;
+  this.pauseRender = function(pauseState) {
+    if(pauseState && !renderHalted) {
+      renderHalted = true;
+      forceNextRender = false;
+      needRender = false;
+    }
+    else if(!pauseState && renderHalted) {
+      renderHalted = false;
+
+      if(needRender) {
+        instance.forceFullRender = forceNextRender;
+        this.render();
+      }
+
+      needRender = false;
+      forceNextRender = false;
+    }
+  };
+
+  /**
    * Render visible data
    * @public
    */
   this.render = function () {
+    if(renderHalted) {
+      forceNextRender = forceNextRender || instance.forceFullRender;
+      needRender = true;
+      return;
+    }
+
     if (instance.view) {
       instance.forceFullRender = true; //used when data was changed
       selection.refreshBorders(null, true);
@@ -1521,6 +1573,55 @@ Handsontable.Core = function (rootElement, userSettings) {
   };
 
   /**
+   * Returns cell meta data object corresponding to params row, col, based on source data
+   * @param {Number} row
+   * @param {Number} col
+   * @public
+   * @return {Object}
+   */
+  this.getSourceCellMeta = function(row, col) {
+    var prop = datamap.colToProp(col)
+      , cellProperties;
+
+    //row = translateRowIndex(row);
+    //col = translateColIndex(col);
+
+    if (!priv.columnSettings[col]) {
+      priv.columnSettings[col] = Handsontable.helper.columnFactory(GridSettings, priv.columnsSettingConflicts);
+    }
+
+    if (!priv.cellSettings[row]) {
+      priv.cellSettings[row] = [];
+    }
+    if (!priv.cellSettings[row][col]) {
+      priv.cellSettings[row][col] = new priv.columnSettings[col]();
+    }
+
+    cellProperties = priv.cellSettings[row][col]; //retrieve cellProperties from cache
+
+    cellProperties.row = row;
+    cellProperties.col = col;
+    cellProperties.prop = prop;
+    cellProperties.instance = instance;
+
+    Handsontable.hooks.run(instance, 'beforeGetSourceCellMeta', row, col, cellProperties);
+    Handsontable.helper.extend(cellProperties, expandType(cellProperties)); //for `type` added in beforeGetCellMeta
+
+    if (cellProperties.cells) {
+      var settings = cellProperties.cells.call(cellProperties, row, col, prop);
+
+      if (settings) {
+        Handsontable.helper.extend(cellProperties, settings);
+        Handsontable.helper.extend(cellProperties, expandType(settings)); //for `type` added in cells
+      }
+    }
+
+    Handsontable.hooks.run(instance, 'afterGetSourceCellMeta', row, col, cellProperties);
+
+    return cellProperties;
+  };
+
+  /**
    * Returns cell meta data object corresponding to params row, col
    * @param {Number} row
    * @param {Number} col
@@ -1607,9 +1708,10 @@ Handsontable.Core = function (rootElement, userSettings) {
    */
   this.validateCells = function (callback) {
     var waitingForValidator = new ValidatorsQueue();
-    waitingForValidator.onQueueEmpty = callback;
+    waitingForValidator.onQueueEmpty = callback || this.onQueueEmpty;
+    var spareRows = instance.getSettings().minSpareRows || 0;
 
-    var i = instance.countRows() - 1;
+    var i = instance.countRows() - 1 - spareRows;
     while (i >= 0) {
       var j = instance.countCols() - 1;
       while (j >= 0) {
