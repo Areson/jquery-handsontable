@@ -1,13 +1,17 @@
 describe('WalkontableSelection', function () {
   var $table
     , $container
+    , $wrapper
     , debug = false;
 
   beforeEach(function () {
-    $container = $('<div></div>').css({'overflow': 'auto'});
-    $container.width(100).height(200);
+    $wrapper = $('<div></div>').css({'overflow': 'hidden'});
+    $wrapper.width(100).height(200);
+    $container = $('<div></div>');
     $table = $('<table></table>'); //create a table that is not attached to document
-    $container.append($table).appendTo('body');
+    $wrapper.append($container);
+    $container.append($table);
+    $wrapper.appendTo('body');
     createDataArray();
   });
 
@@ -15,7 +19,7 @@ describe('WalkontableSelection', function () {
     if (!debug) {
       $('.wtHolder').remove();
     }
-    $container.remove();
+    $wrapper.remove();
   });
 
   it("should add/remove class to selection when cell is clicked", function () {
@@ -46,6 +50,43 @@ describe('WalkontableSelection', function () {
     $td2.simulate('mousedown');
     expect($td1.hasClass('current')).toEqual(false);
     expect($td2.hasClass('current')).toEqual(true);
+  });
+
+  it("should add class to selection on all overlays", function () {
+    $wrapper.width(300).height(300);
+
+    this.data = Handsontable.helper.createSpreadsheetData(10, 10);
+
+    var wt = new Walkontable({
+      table: $table[0],
+      data: getData,
+      totalRows: getTotalRows,
+      totalColumns: getTotalColumns,
+      selections: [
+        new WalkontableSelection({
+          className: 'current'
+        }),
+        new WalkontableSelection({
+          className: 'area'
+        })
+      ],
+      fixedColumnsLeft: 2,
+      fixedRowsTop: 2
+    });
+    shimSelectionProperties(wt);
+
+    wt.selections.area.add(new WalkontableCellCoords(1, 1));
+    wt.selections.area.add(new WalkontableCellCoords(1, 2));
+    wt.selections.area.add(new WalkontableCellCoords(2, 1));
+    wt.selections.area.add(new WalkontableCellCoords(2, 2));
+
+    wt.draw();
+
+    var tds = $wrapper.find('td:contains(B2), td:contains(B3), td:contains(C2), td:contains(C3)');
+    expect(tds.length).toBeGreaterThan(4);
+    for (var i = 0, ilen = tds.length; i < ilen; i++) {
+      expect(tds[i].className).toContain("area");
+    }
   });
 
   it("should not add class to selection until it is rerendered", function () {
@@ -189,8 +230,7 @@ describe('WalkontableSelection', function () {
   });
 
   it("should highlight cells in selected row & column", function () {
-
-    $container.width(300);
+    $wrapper.width(300);
 
     var wt = new Walkontable({
       table: $table[0],
@@ -216,6 +256,8 @@ describe('WalkontableSelection', function () {
   });
 
   it("should highlight cells in selected row & column, when same class is shared between 2 selection definitions", function () {
+    $wrapper.width(300);
+
     var wt = new Walkontable({
       table: $table[0],
       data: getData,
@@ -270,7 +312,7 @@ describe('WalkontableSelection', function () {
   });
 
   it("should add/remove appropriate class to the row/column headers of selected cells", function() {
-    $container.width(300);
+    $wrapper.width(300);
 
     var wt = new Walkontable({
       table: $table[0],
@@ -297,12 +339,20 @@ describe('WalkontableSelection', function () {
     wt.selections.current.add(new WalkontableCellCoords(2, 2));
     wt.draw();
 
-    expect($table.find('.highlightRow').length).toEqual(wt.wtTable.columnStrategy.countVisible() * 2 + 2 - 4);
+    // left side:
+    // -2 -> because one row is partially visible
 
+    // right side:
     // *2 -> because there are 2 columns selected
     // +2 -> because there are the headers
     // -4 -> because 4 cells are selected = there are overlapping highlightRow class
-    expect($table.find('.highlightColumn').length).toEqual(wt.wtTable.getRenderedRowsCount() * 2 + 2 - 4);
+    expect($table.find('.highlightRow').length).toEqual(wt.wtViewport.columnsVisibleCalculator.count * 2 + 2 - 4);
+    expect($table.find('.highlightColumn').length - 2).toEqual(wt.wtViewport.rowsVisibleCalculator.count * 2 + 2 - 4);
+    expect($table.find('.highlightColumn').length).toEqual(14);
+    expect(getTableTopClone().find('.highlightColumn').length).toEqual(2);
+    expect(getTableTopClone().find('.highlightRow').length).toEqual(0);
+    expect(getTableLeftClone().find('.highlightColumn').length).toEqual(0);
+    expect(getTableLeftClone().find('.highlightRow').length).toEqual(2);
 
     var $colHeaders = $table.find("thead tr:first-child th"),
         $rowHeaders = $table.find("tbody tr th:first-child");
@@ -318,7 +368,10 @@ describe('WalkontableSelection', function () {
 
     expect($table.find('.highlightRow').length).toEqual(0);
     expect($table.find('.highlightColumn').length).toEqual(0);
-
+    expect(getTableTopClone().find('.highlightColumn').length).toEqual(0);
+    expect(getTableTopClone().find('.highlightRow').length).toEqual(0);
+    expect(getTableLeftClone().find('.highlightColumn').length).toEqual(0);
+    expect(getTableLeftClone().find('.highlightRow').length).toEqual(0);
   });
 
   describe("replace", function() {

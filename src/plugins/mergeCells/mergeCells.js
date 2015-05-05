@@ -1,10 +1,21 @@
+
+import {registerPlugin} from './../../plugins.js';
+import {WalkontableCellCoords} from './../../3rdparty/walkontable/src/cellCoords.js';
+import {WalkontableCellRange} from './../../3rdparty/walkontable/src/cellRange.js';
+import {WalkontableTable} from './../../3rdparty/walkontable/src/table.js';
+
+export {MergeCells};
+
+//registerPlugin('mergeCells', MergeCells);
+
 function CellInfoCollection() {
 
   var collection = [];
 
   collection.getInfo = function (row, col) {
     for (var i = 0, ilen = this.length; i < ilen; i++) {
-      if (this[i].row <= row && this[i].row + this[i].rowspan - 1 >= row && this[i].col <= col && this[i].col + this[i].colspan - 1 >= col) {
+      if (this[i].row <= row && this[i].row + this[i].rowspan - 1 >= row &&
+          this[i].col <= col && this[i].col + this[i].colspan - 1 >= col) {
         return this[i];
       }
     }
@@ -36,12 +47,17 @@ function CellInfoCollection() {
 
 /**
  * Plugin used to merge cells in Handsontable
+ *
+ * @class MergeCells
+ * @private
+ * @plugin
  * @constructor
+ * @private
  */
 function MergeCells(mergeCellsSetting) {
   this.mergedCellInfoCollection = new CellInfoCollection();
 
-  if (Handsontable.helper.isArray(mergeCellsSetting)) {
+  if (Array.isArray(mergeCellsSetting)) {
     for (var i = 0, ilen = mergeCellsSetting.length; i < ilen; i++) {
       this.mergedCellInfoCollection.setInfo(mergeCellsSetting[i]);
     }
@@ -51,12 +67,12 @@ function MergeCells(mergeCellsSetting) {
 /**
  * @param cellRange (WalkontableCellRange)
  */
-MergeCells.prototype.canMergeRange = function (cellRange) {
+MergeCells.prototype.canMergeRange = function(cellRange) {
   //is more than one cell selected
   return !cellRange.isSingle();
 };
 
-MergeCells.prototype.mergeRange = function (cellRange) {
+MergeCells.prototype.mergeRange = function(cellRange) {
   if (!this.canMergeRange(cellRange)) {
     return;
   }
@@ -68,65 +84,65 @@ MergeCells.prototype.mergeRange = function (cellRange) {
   var mergeParent = {};
   mergeParent.row = topLeft.row;
   mergeParent.col = topLeft.col;
-  mergeParent.rowspan = bottomRight.row - topLeft.row + 1; //TD has rowspan == 1 by default. rowspan == 2 means spread over 2 cells
+  // TD has rowspan == 1 by default. rowspan == 2 means spread over 2 cells
+  mergeParent.rowspan = bottomRight.row - topLeft.row + 1;
   mergeParent.colspan = bottomRight.col - topLeft.col + 1;
   this.mergedCellInfoCollection.setInfo(mergeParent);
 };
 
-MergeCells.prototype.mergeOrUnmergeSelection = function (cellRange) {
+MergeCells.prototype.mergeOrUnmergeSelection = function(cellRange) {
   var info = this.mergedCellInfoCollection.getInfo(cellRange.from.row, cellRange.from.col);
   if (info) {
     //unmerge
     this.unmergeSelection(cellRange.from);
-  }
-  else {
+  } else {
     //merge
     this.mergeSelection(cellRange);
   }
 };
 
-MergeCells.prototype.mergeSelection = function (cellRange) {
+MergeCells.prototype.mergeSelection = function(cellRange) {
   this.mergeRange(cellRange);
 };
 
-MergeCells.prototype.unmergeSelection = function (cellRange) {
+MergeCells.prototype.unmergeSelection = function(cellRange) {
   var info = this.mergedCellInfoCollection.getInfo(cellRange.row, cellRange.col);
   this.mergedCellInfoCollection.removeInfo(info.row, info.col);
 };
 
-MergeCells.prototype.applySpanProperties = function (TD, row, col) {
+MergeCells.prototype.applySpanProperties = function(TD, row, col) {
   var info = this.mergedCellInfoCollection.getInfo(row, col);
+
   if (info) {
     if (info.row === row && info.col === col) {
       TD.setAttribute('rowspan', info.rowspan);
       TD.setAttribute('colspan', info.colspan);
-    }
-    else {
+    } else {
+      TD.removeAttribute('rowspan');
+      TD.removeAttribute('colspan');
+
       TD.style.display = "none";
     }
-  }
-  else {
+  } else {
     TD.removeAttribute('rowspan');
     TD.removeAttribute('colspan');
   }
 };
 
-MergeCells.prototype.modifyTransform = function (hook, currentSelectedRange, delta) {
-  var sameRowspan = function (merged, coords) {
-      if (coords.row >= merged.row && coords.row <= (merged.row + merged.rowspan - 1)) {
-        return true;
-      }
-      return false;
+MergeCells.prototype.modifyTransform = function(hook, currentSelectedRange, delta) {
+  var sameRowspan = function(merged, coords) {
+    if (coords.row >= merged.row && coords.row <= (merged.row + merged.rowspan - 1)) {
+      return true;
     }
-    , sameColspan = function (merged, coords) {
-      if (coords.col >= merged.col && coords.col <= (merged.col + merged.colspan - 1)) {
-        return true;
-      }
-      return false;
+    return false;
+  }, sameColspan = function(merged, coords) {
+    if (coords.col >= merged.col && coords.col <= (merged.col + merged.colspan - 1)) {
+      return true;
     }
-    , getNextPosition = function (newDelta) {
-      return new WalkontableCellCoords(currentSelectedRange.to.row + newDelta.row, currentSelectedRange.to.col + newDelta.col);
-    };
+    return false;
+  }, getNextPosition = function(newDelta) {
+    return new WalkontableCellCoords(currentSelectedRange.to.row + newDelta.row, currentSelectedRange.to.col + newDelta.col);
+  };
 
   var newDelta = {
     row: delta.row,
@@ -139,9 +155,10 @@ MergeCells.prototype.modifyTransform = function (hook, currentSelectedRange, del
     if (!this.lastDesiredCoords) {
       this.lastDesiredCoords = new WalkontableCellCoords(null, null);
     }
-    var currentPosition = new WalkontableCellCoords(currentSelectedRange.highlight.row, currentSelectedRange.highlight.col)
-      , mergedParent = this.mergedCellInfoCollection.getInfo(currentPosition.row, currentPosition.col)// if current position's parent is a merged range, returns it
-      , currentRangeContainsMerge; // if current range contains a merged range
+    var currentPosition = new WalkontableCellCoords(currentSelectedRange.highlight.row, currentSelectedRange.highlight.col),
+      // if current position's parent is a merged range, returns it
+      mergedParent = this.mergedCellInfoCollection.getInfo(currentPosition.row, currentPosition.col),
+      currentRangeContainsMerge; // if current range contains a merged range
 
     for (var i = 0, mergesLength = this.mergedCellInfoCollection.length; i < mergesLength; i++) {
       var range = this.mergedCellInfoCollection[i];
@@ -153,9 +170,9 @@ MergeCells.prototype.modifyTransform = function (hook, currentSelectedRange, del
     }
 
     if (mergedParent) { // only merge selected
-      var mergeTopLeft = new WalkontableCellCoords(mergedParent.row, mergedParent.col)
-        , mergeBottomRight = new WalkontableCellCoords(mergedParent.row + mergedParent.rowspan - 1, mergedParent.col + mergedParent.colspan - 1)
-        , mergeRange = new WalkontableCellRange(mergeTopLeft, mergeTopLeft, mergeBottomRight);
+      var mergeTopLeft = new WalkontableCellCoords(mergedParent.row, mergedParent.col),
+        mergeBottomRight = new WalkontableCellCoords(mergedParent.row + mergedParent.rowspan - 1, mergedParent.col + mergedParent.colspan - 1),
+        mergeRange = new WalkontableCellRange(mergeTopLeft, mergeTopLeft, mergeBottomRight);
 
       if (!mergeRange.includes(this.lastDesiredCoords)) {
         this.lastDesiredCoords = new WalkontableCellCoords(null, null); // reset outdated version of lastDesiredCoords
@@ -176,28 +193,28 @@ MergeCells.prototype.modifyTransform = function (hook, currentSelectedRange, del
       }
     }
 
-    var nextPosition = new WalkontableCellCoords(currentSelectedRange.highlight.row + newDelta.row, currentSelectedRange.highlight.col + newDelta.col)
-      , nextParentIsMerged = this.mergedCellInfoCollection.getInfo(nextPosition.row, nextPosition.col);
+    var nextPosition = new WalkontableCellCoords(currentSelectedRange.highlight.row + newDelta.row,
+          currentSelectedRange.highlight.col + newDelta.col),
+      nextParentIsMerged = this.mergedCellInfoCollection.getInfo(nextPosition.row, nextPosition.col);
 
     if (nextParentIsMerged) { // skipping the invisible cells in the merge range
       this.lastDesiredCoords = nextPosition;
       newDelta = {
         row: nextParentIsMerged.row - currentPosition.row,
         col: nextParentIsMerged.col - currentPosition.col
-      }
+      };
     }
   } else if (hook == 'modifyTransformEnd') {
     for (var i = 0, mergesLength = this.mergedCellInfoCollection.length; i < mergesLength; i++) {
-      var currentMerge = this.mergedCellInfoCollection[i]
-        , mergeTopLeft = new WalkontableCellCoords(currentMerge.row, currentMerge.col)
-        , mergeBottomRight = new WalkontableCellCoords(currentMerge.row + currentMerge.rowspan - 1, currentMerge.col + currentMerge.colspan - 1)
-        , mergedRange = new WalkontableCellRange(mergeTopLeft, mergeTopLeft, mergeBottomRight)
-        , sharedBorders = currentSelectedRange.getBordersSharedWith(mergedRange);
+      var currentMerge = this.mergedCellInfoCollection[i],
+        mergeTopLeft = new WalkontableCellCoords(currentMerge.row, currentMerge.col),
+        mergeBottomRight = new WalkontableCellCoords(currentMerge.row + currentMerge.rowspan - 1, currentMerge.col + currentMerge.colspan - 1),
+        mergedRange = new WalkontableCellRange(mergeTopLeft, mergeTopLeft, mergeBottomRight),
+        sharedBorders = currentSelectedRange.getBordersSharedWith(mergedRange);
 
       if (mergedRange.isEqual(currentSelectedRange)) { // only the merged range is selected
         currentSelectedRange.setDirection("NW-SE");
-      }
-      else if (sharedBorders.length > 0) {
+      } else if (sharedBorders.length > 0) {
         var mergeHighlighted = (currentSelectedRange.highlight.isEqual(mergedRange.from));
 
         if (sharedBorders.indexOf('top') > -1) { // if range shares a border with the merged section, change range direction accordingly
@@ -215,11 +232,12 @@ MergeCells.prototype.modifyTransform = function (hook, currentSelectedRange, del
         }
       }
 
-      var nextPosition = getNextPosition(newDelta)
-        , withinRowspan = sameRowspan(currentMerge, nextPosition)
-        , withinColspan = sameColspan(currentMerge, nextPosition);
+      var nextPosition = getNextPosition(newDelta),
+        withinRowspan = sameRowspan(currentMerge, nextPosition),
+        withinColspan = sameColspan(currentMerge, nextPosition);
 
-      if (currentSelectedRange.includesRange(mergedRange) && (mergedRange.includes(nextPosition) || withinRowspan || withinColspan)) { // if next step overlaps a merged range, jump past it
+      if (currentSelectedRange.includesRange(mergedRange) && (mergedRange.includes(nextPosition) ||
+          withinRowspan || withinColspan)) { // if next step overlaps a merged range, jump past it
         if (withinRowspan) {
           if (newDelta.row < 0) {
             newDelta.row -= currentMerge.rowspan - 1;
@@ -238,15 +256,15 @@ MergeCells.prototype.modifyTransform = function (hook, currentSelectedRange, del
     }
   }
 
-  if (newDelta.row != 0) delta.row = newDelta.row;
-  if (newDelta.col != 0) delta.col = newDelta.col;
+  if (newDelta.row !== 0) {
+    delta.row = newDelta.row;
+  }
+  if (newDelta.col !== 0) {
+    delta.col = newDelta.col;
+  }
 };
 
-if (typeof Handsontable == 'undefined') {
-  throw new Error('Handsontable is not defined');
-}
-
-var beforeInit = function () {
+var beforeInit = function() {
   var instance = this;
   var mergeCellsSetting = instance.getSettings().mergeCells;
 
@@ -257,14 +275,14 @@ var beforeInit = function () {
   }
 };
 
-var afterInit = function () {
+var afterInit = function() {
   var instance = this;
   if (instance.mergeCells) {
     /**
      * Monkey patch WalkontableTable.prototype.getCell to return TD for merged cell parent if asked for TD of a cell that is
      * invisible due to the merge. This is not the cleanest solution but there is a test case for it (merged cells scroll) so feel free to refactor it!
      */
-    instance.view.wt.wtTable.getCell = function (coords) {
+    instance.view.wt.wtTable.getCell = function(coords) {
       if (instance.getSettings().mergeCells) {
         var mergeParent = instance.mergeCells.mergedCellInfoCollection.getInfo(coords.row, coords.col);
         if (mergeParent) {
@@ -276,7 +294,7 @@ var afterInit = function () {
   }
 };
 
-var onBeforeKeyDown = function (event) {
+var onBeforeKeyDown = function(event) {
   if (!this.mergeCells) {
     return;
   }
@@ -292,7 +310,7 @@ var onBeforeKeyDown = function (event) {
   }
 };
 
-var addMergeActionsToContextMenu = function (defaultOptions) {
+var addMergeActionsToContextMenu = function(defaultOptions) {
   if (!this.getSettings().mergeCells) {
     return;
   }
@@ -301,34 +319,33 @@ var addMergeActionsToContextMenu = function (defaultOptions) {
 
   defaultOptions.items.push({
     key: 'mergeCells',
-    name: function () {
+    name: function() {
       var sel = this.getSelected();
       var info = this.mergeCells.mergedCellInfoCollection.getInfo(sel[0], sel[1]);
       if (info) {
         return 'Unmerge cells';
-      }
-      else {
+      } else {
         return 'Merge cells';
       }
     },
-    callback: function () {
+    callback: function() {
       this.mergeCells.mergeOrUnmergeSelection(this.getSelectedRange());
       this.render();
     },
-    disabled: function () {
+    disabled: function() {
       return false;
     }
   });
 };
 
-var afterRenderer = function (TD, row, col, prop, value, cellProperties) {
+var afterRenderer = function(TD, row, col, prop, value, cellProperties) {
   if (this.mergeCells) {
     this.mergeCells.applySpanProperties(TD, row, col);
   }
 };
 
-var modifyTransformFactory = function (hook) {
-  return function (delta) {
+var modifyTransformFactory = function(hook) {
+  return function(delta) {
     var mergeCellsSetting = this.getSettings().mergeCells;
     if (mergeCellsSetting) {
       var currentSelectedRange = this.getSelectedRange();
@@ -340,27 +357,25 @@ var modifyTransformFactory = function (hook) {
         var totalCols = this.countCols();
         if (currentSelectedRange.from.row < 0) {
           currentSelectedRange.from.row = 0;
-        }
-        else if (currentSelectedRange.from.row > 0 && currentSelectedRange.from.row >= totalRows) {
+        } else if (currentSelectedRange.from.row > 0 && currentSelectedRange.from.row >= totalRows) {
           currentSelectedRange.from.row = currentSelectedRange.from - 1;
         }
 
         if (currentSelectedRange.from.col < 0) {
           currentSelectedRange.from.col = 0;
-        }
-        else if (currentSelectedRange.from.col > 0 && currentSelectedRange.from.col >= totalCols) {
+        } else if (currentSelectedRange.from.col > 0 && currentSelectedRange.from.col >= totalCols) {
           currentSelectedRange.from.col = totalCols - 1;
         }
       }
     }
-  }
+  };
 };
 
 /**
  * While selecting cells with keyboard or mouse, make sure that rectangular area is expanded to the extent of the merged cell
  * @param coords
  */
-var beforeSetRangeEnd = function (coords) {
+var beforeSetRangeEnd = function(coords) {
 
   this.lastDesiredCoords = null; //unset lastDesiredCoords when selection is changed with mouse
   var mergeCellsSetting = this.getSettings().mergeCells;
@@ -396,8 +411,8 @@ var beforeSetRangeEnd = function (coords) {
  * @param corners
  * @param className
  */
-var beforeDrawAreaBorders = function (corners, className) {
-  if (className && className == 'area'){
+var beforeDrawAreaBorders = function(corners, className) {
+  if (className && className == 'area') {
     var mergeCellsSetting = this.getSettings().mergeCells;
     if (mergeCellsSetting) {
       var selRange = this.getSelectedRange();
@@ -434,24 +449,24 @@ var afterGetCellMeta = function(row, col, cellProperties) {
   }
 };
 
-var afterViewportRowCalculatorOverride = function (calc) {
+var afterViewportRowCalculatorOverride = function(calc) {
   var mergeCellsSetting = this.getSettings().mergeCells;
   if (mergeCellsSetting) {
     var colCount = this.countCols();
     var mergeParent;
     for (var c = 0; c < colCount; c++) {
-      mergeParent = this.mergeCells.mergedCellInfoCollection.getInfo(calc.renderStartRow, c);
+      mergeParent = this.mergeCells.mergedCellInfoCollection.getInfo(calc.startRow, c);
       if (mergeParent) {
-        if (mergeParent.row < calc.renderStartRow) {
-          calc.renderStartRow = mergeParent.row;
+        if (mergeParent.row < calc.startRow) {
+          calc.startRow = mergeParent.row;
           return afterViewportRowCalculatorOverride.call(this, calc); //recursively search upwards
         }
       }
-      mergeParent = this.mergeCells.mergedCellInfoCollection.getInfo(calc.renderEndRow, c);
+      mergeParent = this.mergeCells.mergedCellInfoCollection.getInfo(calc.endRow, c);
       if (mergeParent) {
         var mergeEnd = mergeParent.row + mergeParent.rowspan - 1;
-        if (mergeEnd > calc.renderEndRow) {
-          calc.renderEndRow = mergeEnd;
+        if (mergeEnd > calc.endRow) {
+          calc.endRow = mergeEnd;
           return afterViewportRowCalculatorOverride.call(this, calc); //recursively search upwards
         }
       }
@@ -459,15 +474,42 @@ var afterViewportRowCalculatorOverride = function (calc) {
   }
 };
 
-var isMultipleSelection = function(isMultiple) {
-  if(isMultiple && this.mergeCells) {
-    var mergedCells = this.mergeCells.mergedCellInfoCollection
-      , selectionRange = this.getSelectedRange();
+var afterViewportColumnCalculatorOverride = function(calc) {
+  var mergeCellsSetting = this.getSettings().mergeCells;
+  if (mergeCellsSetting) {
+    var rowCount = this.countRows();
+    var mergeParent;
+    for (var r = 0; r < rowCount; r++) {
+      mergeParent = this.mergeCells.mergedCellInfoCollection.getInfo(r, calc.startColumn);
 
-    for(var group in mergedCells) {
-      if(selectionRange.highlight.row == mergedCells[group].row && selectionRange.highlight.col == mergedCells[group].col
-        && selectionRange.to.row == mergedCells[group].row + mergedCells[group].rowspan - 1
-        && selectionRange.to.col == mergedCells[group].col + mergedCells[group].colspan - 1) {
+      if (mergeParent) {
+        if (mergeParent.col < calc.startColumn) {
+          calc.startColumn = mergeParent.col;
+          return afterViewportColumnCalculatorOverride.call(this, calc); //recursively search upwards
+        }
+      }
+      mergeParent = this.mergeCells.mergedCellInfoCollection.getInfo(r, calc.endColumn);
+      if (mergeParent) {
+        var mergeEnd = mergeParent.col + mergeParent.colspan - 1;
+        if (mergeEnd > calc.endColumn) {
+          calc.endColumn = mergeEnd;
+          return afterViewportColumnCalculatorOverride.call(this, calc); //recursively search upwards
+        }
+      }
+    }
+  }
+};
+
+var isMultipleSelection = function(isMultiple) {
+  if (isMultiple && this.mergeCells) {
+    var mergedCells = this.mergeCells.mergedCellInfoCollection,
+      selectionRange = this.getSelectedRange();
+
+    for (var group in mergedCells) {
+      if (selectionRange.highlight.row == mergedCells[group].row &&
+          selectionRange.highlight.col == mergedCells[group].col &&
+          selectionRange.to.row == mergedCells[group].row + mergedCells[group].rowspan - 1 &&
+          selectionRange.to.col == mergedCells[group].col + mergedCells[group].colspan - 1) {
         return false;
       }
     }
@@ -487,6 +529,7 @@ Handsontable.hooks.add('afterRenderer', afterRenderer);
 Handsontable.hooks.add('afterContextMenuDefaultOptions', addMergeActionsToContextMenu);
 Handsontable.hooks.add('afterGetCellMeta', afterGetCellMeta);
 Handsontable.hooks.add('afterViewportRowCalculatorOverride', afterViewportRowCalculatorOverride);
+Handsontable.hooks.add('afterViewportColumnCalculatorOverride', afterViewportColumnCalculatorOverride);
 
 Handsontable.MergeCells = MergeCells;
 

@@ -109,7 +109,7 @@ describe('manualRowResize', function () {
     var afterRowResizeCallback = jasmine.createSpy('afterRowResizeCallback');
 
     handsontable({
-      data: createSpreadsheetData(5, 5),
+      data: Handsontable.helper.createSpreadsheetData(5, 5),
       rowHeaders: true,
       manualRowResize: true,
       afterRowResize: afterRowResizeCallback
@@ -126,7 +126,7 @@ describe('manualRowResize', function () {
     var afterRowResizeCallback = jasmine.createSpy('afterRowResizeCallback');
 
     handsontable({
-      data: createSpreadsheetData(5, 5),
+      data: Handsontable.helper.createSpreadsheetData(5, 5),
       rowHeaders: true,
       manualRowResize: true,
       afterRowResize: afterRowResizeCallback
@@ -143,7 +143,7 @@ describe('manualRowResize', function () {
     var afterRowResizeCallback = jasmine.createSpy('afterRowResizeCallback');
 
     handsontable({
-      data: createSpreadsheetData(5, 5),
+      data: Handsontable.helper.createSpreadsheetData(5, 5),
       rowHeaders: true,
       manualRowResize: true,
       afterRowResize: afterRowResizeCallback
@@ -172,7 +172,7 @@ describe('manualRowResize', function () {
     var afterRowResizeCallback = jasmine.createSpy('afterRowResizeCallback');
 
     handsontable({
-      data: createSpreadsheetData(5, 5),
+      data: Handsontable.helper.createSpreadsheetData(5, 5),
       rowHeaders: true,
       manualRowResize: true,
       afterRowResize: afterRowResizeCallback
@@ -213,7 +213,7 @@ describe('manualRowResize', function () {
     var afterRowResizeCallback = jasmine.createSpy('afterRowResizeCallback');
 
     handsontable({
-      data: createSpreadsheetData(5, 5),
+      data: Handsontable.helper.createSpreadsheetData(5, 5),
       rowHeaders: true,
       manualRowResize: true,
       afterRowResize: afterRowResizeCallback
@@ -237,13 +237,15 @@ describe('manualRowResize', function () {
   })
 
   it("should display the resize handle in the correct place after the table has been scrolled", function () {
-    handsontable({
-      data: createSpreadsheetData(20, 20),
+    var hot = handsontable({
+      data: Handsontable.helper.createSpreadsheetData(20, 20),
       rowHeaders: true,
       manualRowResize: true,
       height: 100,
       width: 200
     });
+
+    var mainHolder = hot.view.wt.wtTable.holder;
 
     var $rowHeader = this.$container.find('.ht_clone_left tbody tr:eq(2) th:eq(0)');
     $rowHeader.simulate("mouseover");
@@ -253,8 +255,8 @@ describe('manualRowResize', function () {
     expect($rowHeader.offset().left).toEqual($handle.offset().left);
     expect($rowHeader.offset().top + $rowHeader.height() - 5).toEqual($handle.offset().top);
 
-    this.$container.scrollTop(200);
-    this.$container.scroll();
+    $(mainHolder).scrollTop(200);
+    $(mainHolder).scroll();
 
     $rowHeader = this.$container.find('.ht_clone_left tbody tr:eq(2) th:eq(0)');
     $rowHeader.simulate("mouseover");

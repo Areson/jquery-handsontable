@@ -13,7 +13,7 @@ describe('manualRowMove', function () {
   });
 
   var moveSecondDisplayedRowBeforeFirstRow = function(container, secondDisplayedRowIndex) {
-    var $mainContainer = container.parents(".handsontable").not("[class*=clone]").first(),
+    var $mainContainer = container.parents(".handsontable").not("[class*=clone]").not("[class*=master]").first(),
       $rowHeaders = container.find('tbody tr th'),
       $firstRowHeader = $rowHeaders.eq(secondDisplayedRowIndex - 1),
       $secondRowHeader = $rowHeaders.eq(secondDisplayedRowIndex);
@@ -36,7 +36,7 @@ describe('manualRowMove', function () {
   };
 
   var moveFirstDisplayedRowAfterSecondRow = function(container, firstDisplayedRowIndex) {
-    var $mainContainer = container.parents(".handsontable").not("[class*=clone]").first(),
+    var $mainContainer = container.parents(".handsontable").not("[class*=clone]").not("[class*=master]").first(),
       $rowHeaders = container.find('tbody tr th'),
       $firstRowHeader = $rowHeaders.eq(firstDisplayedRowIndex),
       $secondRowHeader = $rowHeaders.eq(firstDisplayedRowIndex + 1);
@@ -330,13 +330,15 @@ describe('manualRowMove', function () {
   });
 
   it("should display the move handle in the correct place after the table has been scrolled", function () {
-    handsontable({
-      data: createSpreadsheetData(20, 20),
+    var hot = handsontable({
+      data: Handsontable.helper.createSpreadsheetData(20, 20),
       rowHeaders: true,
       manualRowMove: true,
       height: 100,
       width: 200
     });
+
+    var mainHolder = hot.view.wt.wtTable.holder;
 
     var $rowHeader = this.$container.find('.ht_clone_left tbody tr:eq(2) th:eq(0)');
     $rowHeader.simulate("mouseover");
@@ -347,8 +349,8 @@ describe('manualRowMove', function () {
     expect($rowHeader.offset().left).toEqual($handle.offset().left);
     expect($rowHeader.offset().top).toEqual($handle.offset().top);
 
-    this.$container.scrollTop(200);
-    this.$container.scroll();
+    $(mainHolder).scrollTop(200);
+    hot.render();
 
     $rowHeader = this.$container.find('.ht_clone_left tbody tr:eq(2) th:eq(0)');
     $rowHeader.simulate("mouseover");
