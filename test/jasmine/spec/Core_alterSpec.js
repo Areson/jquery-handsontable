@@ -266,6 +266,20 @@ describe('Core_alter', function () {
 
       expect(output).toEqual([1, 2]);
     });
+
+    it("should decrement the number of fixed rows, if a fix row is removed", function () {
+      var hot = handsontable({
+        startCols: 1,
+        startRows: 3,
+        fixedRowsTop: 4
+      });
+
+      alter('remove_row', 1, 1);
+      expect(hot.getSettings().fixedRowsTop).toEqual(3);
+      alter('remove_row', 1, 2);
+      expect(hot.getSettings().fixedRowsTop).toEqual(1);
+    });
+
   });
 
   describe("remove column", function () {
@@ -451,6 +465,19 @@ describe('Core_alter', function () {
 
       expect(getColHeader()).toEqual(['Header0', 'Header2']);
 
+    });
+
+    it("should decrement the number of fixed columns, if a fix column is removed", function () {
+      var hot = handsontable({
+        startCols: 1,
+        startRows: 3,
+        fixedColumnsLeft: 4
+      });
+
+      alter('remove_col', 1, 1);
+      expect(hot.getSettings().fixedColumnsLeft).toEqual(3);
+      alter('remove_col', 1, 2);
+      expect(hot.getSettings().fixedColumnsLeft).toEqual(1);
     });
 
   });
@@ -734,6 +761,25 @@ describe('Core_alter', function () {
       expect(getColHeader()).toEqual(['Header0', 'B', 'Header1', 'Header2']);
 
     });
+
+    it("should stretch the table after adding another column (if stretching is set to 'all')", function () {
+      this.$container.css({
+        "width": 500
+      });
+
+      var hot = handsontable({
+        startCols: 5,
+        startRows: 10,
+        stretchH: 'all'
+      });
+
+      expect(Handsontable.Dom.outerWidth(hot.view.TBODY)).toEqual(500);
+      alter('insert_col', null, 1);
+      expect(Handsontable.Dom.outerWidth(hot.view.TBODY)).toEqual(500);
+      alter('insert_col', null, 1);
+      expect(Handsontable.Dom.outerWidth(hot.view.TBODY)).toEqual(500);
+    });
+
   });
 
 });

@@ -288,6 +288,44 @@ describe('AutocompleteEditor', function () {
 
     });
 
+    it("should not initialize the dropdown with unneeded scrollbars (scrollbar causing a scrollbar issue)", function () {
+      spyOn(Handsontable.editors.AutocompleteEditor.prototype, 'updateChoicesList').andCallThrough();
+      var updateChoicesList = Handsontable.editors.AutocompleteEditor.prototype.updateChoicesList;
+
+      var hot = handsontable({
+        data: [
+          [
+            "blue"
+          ],
+          [],
+          [],
+          []
+        ],
+        columns: [
+          {
+            editor: 'autocomplete',
+            source: choices
+          }
+        ]
+      });
+
+      selectCell(0, 0);
+
+      var editor = hot.getActiveEditor();
+
+      updateChoicesList.reset();
+
+      keyDownUp('enter');
+
+      waitsFor(function () {
+        return updateChoicesList.calls.length > 0;
+      }, 'Initial choices load', 1000);
+
+      runs(function () {
+        expect(editor.htContainer.scrollWidth).toEqual(editor.htContainer.clientWidth);
+      });
+    });
+
     it('autocomplete list should have textarea dimensions', function () {
       var syncSources = jasmine.createSpy('syncSources');
 
@@ -401,17 +439,16 @@ describe('AutocompleteEditor', function () {
       selectCell(0, 0);
       keyDownUp('enter');
       var $autocomplete = autocomplete();
+      var $autocompleteHolder = $autocomplete.find('.ht_master .wtHolder').first();
 
       waits(100);
       runs(function () {
         expect($autocomplete.find("td").first().text()).toEqual("Acura");
-
-        $autocomplete.scrollTop($autocomplete[0].scrollHeight);
-
-        waits(100);
-        runs(function () {
-          expect($autocomplete.find("td").last().text()).toEqual("Volvo");
-        });
+        $autocompleteHolder.scrollTop($autocompleteHolder[0].scrollHeight);
+      });
+      waits(100);
+      runs(function () {
+        expect($autocomplete.find("td").last().text()).toEqual("Volvo");
       });
     });
 
@@ -2210,28 +2247,36 @@ describe('AutocompleteEditor', function () {
       ]
     });
 
+    this.$container.css({
+      height: 600
+    });
+
     expect(choices.length).toBeGreaterThan(10);
 
     selectCell(0, 0);
     $(getCell(0, 0)).find('.htAutocompleteArrow').simulate('mousedown');
 
     var dropdown = hot.getActiveEditor().htContainer;
+    var dropdownHolder = hot.getActiveEditor().htEditor.view.wt.wtTable.holder;
 
-    expect(dropdown.scrollHeight).toBeGreaterThan(dropdown.clientHeight);
+    waits(30);
+    runs(function() {
+      expect(dropdownHolder.scrollHeight).toBeGreaterThan(dropdownHolder.clientHeight);
 
-    keyDownUp('esc');
+      keyDownUp('esc');
 
-    hot.getSettings().columns[0].source = hot.getSettings().columns[0].source.slice(0).splice(3);
+      hot.getSettings().columns[0].source = hot.getSettings().columns[0].source.slice(0).splice(3);
 
-    hot.updateSettings({});
+      hot.updateSettings({});
 
-    selectCell(0, 0);
-    $(getCell(0, 0)).find('.htAutocompleteArrow').simulate('mousedown');
+      selectCell(0, 0);
+      $(getCell(0, 0)).find('.htAutocompleteArrow').simulate('mousedown');
+    });
 
     waits(30);
 
     runs(function() {
-      expect(dropdown.scrollHeight > dropdown.clientHeight).toBe(false);
+      expect(dropdownHolder.scrollHeight > dropdownHolder.clientHeight).toBe(false);
     });
 
   });
@@ -2266,7 +2311,7 @@ describe('AutocompleteEditor', function () {
 
     var dropdown = hot.getActiveEditor().htContainer;
 
-    hot.view.wt.wtScrollbars.vertical.scrollTo(1);
+    hot.view.wt.wtOverlays.topOverlay.scrollTo(1);
 
     waits(30);
 
@@ -2280,7 +2325,7 @@ describe('AutocompleteEditor', function () {
     runs(function () {
       $(getCell(0, 0)).find('.htAutocompleteArrow').simulate('mousedown');
       $(getCell(0, 0)).find('.htAutocompleteArrow').simulate('mouseup');
-      hot.view.wt.wtScrollbars.vertical.scrollTo(3);
+      hot.view.wt.wtOverlays.topOverlay.scrollTo(3);
     });
 
     waits(30);

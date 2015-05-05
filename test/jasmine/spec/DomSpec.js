@@ -205,4 +205,262 @@ describe('Handsontable.Dom', function () {
     expect(event.isImmediatePropagationStopped()).toBe(true);
   });
 
+  describe('getScrollableElement', function() {
+    it("should return scrollable element with 'scroll' value of 'overflow', 'overflowX' or 'overflowY' property", function () {
+      var $html = $([
+        '<div style="overflow: scroll"><span class="overflow"></span></div>',
+        '<div style="overflow-x: scroll"><span class="overflowX"></span></div>',
+        '<div style="overflow-y: scroll"><span class="overflowY"></span></div>'
+      ].join('')).appendTo('body');
+
+      expect(Handsontable.Dom.getScrollableElement($html.find('.overflow')[0])).toBe($html[0]);
+      expect(Handsontable.Dom.getScrollableElement($html.find('.overflowX')[0])).toBe($html[1]);
+      expect(Handsontable.Dom.getScrollableElement($html.find('.overflowY')[0])).toBe($html[2]);
+
+      $html.remove();
+    });
+
+    it("should return scrollable element with 'auto' value of 'overflow' or 'overflowY' property", function () {
+      var $html = $([
+        '<div style="overflow: auto; height: 50px;"><div class="knob" style="height: 100px"></div></div>',
+        '<div style="overflow-y: auto; height: 50px;"><div class="knob" style="height: 100px"></div></div>',
+        '<div style="overflow-y: auto; height: 50px;">',
+          '<div>',
+            '<div class="knob" style="height: 100px;"></div>',
+          '</div>',
+        '</div>'
+      ].join('')).appendTo('body');
+
+      expect(Handsontable.Dom.getScrollableElement($html.find('.knob')[0])).toBe($html[0]);
+      expect(Handsontable.Dom.getScrollableElement($html.find('.knob')[1])).toBe($html[1]);
+      expect(Handsontable.Dom.getScrollableElement($html.find('.knob')[2])).toBe($html[2]);
+
+      $html.remove();
+    });
+
+    it("should return scrollable element with 'auto' value of 'overflow' or 'overflowX' property", function () {
+      var $html = $([
+        '<div style="overflow: auto; width: 50px; height: 10px"><div class="knob" style="width: 100px; height: 5px"></div></div>',
+        '<div style="overflow-x: auto; width: 50px; height: 10px"><div class="knob" style="width: 100px; height: 5px"></div></div>',
+        '<div style="overflow-x: auto; width: 50px; height: 10px">',
+          '<div>',
+            '<div class="knob" style="width: 100px; height: 5px"></div>',
+          '</div>',
+        '</div>'
+      ].join('')).appendTo('body');
+
+      expect(Handsontable.Dom.getScrollableElement($html.find('.knob')[0])).toBe($html[0]);
+      expect(Handsontable.Dom.getScrollableElement($html.find('.knob')[1])).toBe($html[1]);
+      expect(Handsontable.Dom.getScrollableElement($html.find('.knob')[2])).toBe($html[2]);
+
+      $html.remove();
+    });
+
+    it("should return window object as scrollable element", function () {
+      var $html = $([
+        '<div style="overflow: hidden; width: 50px; height: 10px"><div class="knob" style="width: 100px; height: 5px"></div></div>',
+        '<div style="width: 50px; height: 10px"><div class="knob" style="width: 100px; height: 5px"></div></div>'
+      ].join('')).appendTo('body');
+
+      expect(Handsontable.Dom.getScrollableElement($html.find('.knob')[0])).toBe(window);
+      expect(Handsontable.Dom.getScrollableElement($html.find('.knob')[1])).toBe(window);
+
+      $html.remove();
+    });
+  });
+
+  //
+  // Handsontable.Dom.isChildOfWebComponentTable
+  //
+  describe('isChildOfWebComponentTable', function() {
+    it("should return correct Boolean value depending on whether an element exists in `hot-table` or not", function () {
+      // skip if browser not support Shadow DOM natively
+      if (!document.createElement('div').createShadowRoot) {
+        return;
+      }
+      var hotTable = document.createElement('hot-table');
+      var outsideDiv = document.createElement('div');
+
+      expect(Handsontable.Dom.isChildOfWebComponentTable(hotTable)).toBe(true);
+      expect(Handsontable.Dom.isChildOfWebComponentTable(outsideDiv)).toBe(false);
+
+      var hotTableDiv = document.createElement('div');
+      hotTable.appendChild(hotTableDiv);
+
+      expect(Handsontable.Dom.isChildOfWebComponentTable(hotTableDiv)).toBe(true);
+
+      var fragment = document.createDocumentFragment();
+
+      expect(Handsontable.Dom.isChildOfWebComponentTable(fragment)).toBe(false);
+
+      var myElement = document.createElement('my-element');
+
+      expect(Handsontable.Dom.isChildOfWebComponentTable(myElement)).toBe(false);
+
+      var shadowRoot = myElement.createShadowRoot();
+      var insideDiv = shadowRoot.appendChild(document.createElement('div'));
+      hotTable.createShadowRoot().appendChild(myElement);
+
+      expect(Handsontable.Dom.isChildOfWebComponentTable(myElement)).toBe(true);
+      expect(Handsontable.Dom.isChildOfWebComponentTable(insideDiv)).toBe(true);
+    });
+  });
+
+  //
+  // Handsontable.Dom.polymerWrap
+  //
+  describe('polymerWrap', function() {
+    it("should wrap element into polymer wrapper if exists", function () {
+      expect(Handsontable.Dom.polymerWrap(1)).toBe(1);
+
+      window.wrap = function() { return 'wrapped'; };
+      window.Polymer = {};
+
+      expect(Handsontable.Dom.polymerWrap(1)).toBe('wrapped');
+
+      // Test https://github.com/handsontable/handsontable/issues/2283
+      window.wrap = document.createElement('div');
+
+      expect(Handsontable.Dom.polymerWrap(1)).toBe(1);
+
+      delete window.wrap;
+      delete window.Polymer;
+    });
+  });
+
+  //
+  // Handsontable.Dom.polymerUnwrap
+  //
+  describe('polymerUnwrap', function() {
+    it("should unwrap element from polymer wrapper if exists", function () {
+      expect(Handsontable.Dom.polymerUnwrap('wrapped')).toBe('wrapped');
+
+      window.unwrap = function() { return 1; };
+      window.Polymer = {};
+
+      expect(Handsontable.Dom.polymerUnwrap('wrapped')).toBe(1);
+
+      window.unwrap = document.createElement('div');
+
+      expect(Handsontable.Dom.polymerUnwrap('wrapped')).toBe('wrapped');
+
+      delete window.unwrap;
+      delete window.Polymer;
+    });
+  });
+
+  //
+  // Handsontable.Dom.addClass
+  //
+  describe('addClass', function() {
+    it("should add class names as string to an element", function () {
+      var element = document.createElement('div');
+
+      expect(element.className).toBe('');
+
+      Handsontable.Dom.addClass(element, 'test');
+
+      expect(element.className).toBe('test');
+
+      Handsontable.Dom.addClass(element, 'test test1 test2');
+
+      expect(element.className).toBe('test test1 test2');
+
+      Handsontable.Dom.addClass(element, 'test3');
+
+      expect(element.className).toBe('test test1 test2 test3');
+
+      Handsontable.Dom.addClass(element, '');
+
+      expect(element.className).toBe('test test1 test2 test3');
+    });
+
+    it("should add class names as array to an element", function () {
+      var element = document.createElement('div');
+
+      expect(element.className).toBe('');
+
+      Handsontable.Dom.addClass(element, ['test']);
+
+      expect(element.className).toBe('test');
+
+      Handsontable.Dom.addClass(element, ['test1', 'test2', 'test3']);
+
+      expect(element.className).toBe('test test1 test2 test3');
+
+      Handsontable.Dom.addClass(element, 'test4');
+
+      expect(element.className).toBe('test test1 test2 test3 test4');
+
+      Handsontable.Dom.addClass(element, '');
+
+      expect(element.className).toBe('test test1 test2 test3 test4');
+    });
+  });
+
+  //
+  // Handsontable.Dom.removeClass
+  //
+  describe('removeClass', function() {
+    it("should remove class names as string from an element", function () {
+      var element = document.createElement('div');
+
+      element.className = 'test test1 test2 test3 test4';
+
+      Handsontable.Dom.removeClass(element, 'not-exists');
+
+      expect(element.className).toBe('test test1 test2 test3 test4');
+
+      Handsontable.Dom.removeClass(element, 'test');
+
+      expect(element.className).toBe('test1 test2 test3 test4');
+
+      Handsontable.Dom.removeClass(element, 'test test1 test4');
+
+      expect(element.className).toBe('test2 test3');
+
+      Handsontable.Dom.removeClass(element, '');
+
+      expect(element.className).toBe('test2 test3');
+    });
+
+    it("should remove class names as array from an element", function () {
+      var element = document.createElement('div');
+
+      element.className = 'test test1 test2 test3 test4';
+
+      Handsontable.Dom.removeClass(element, ['not-exists']);
+
+      expect(element.className).toBe('test test1 test2 test3 test4');
+
+      Handsontable.Dom.removeClass(element, ['test']);
+
+      expect(element.className).toBe('test1 test2 test3 test4');
+
+      Handsontable.Dom.removeClass(element, ['test', 'test1', 'test4']);
+
+      expect(element.className).toBe('test2 test3');
+
+      Handsontable.Dom.removeClass(element, ['test', '', '']);
+
+      expect(element.className).toBe('test2 test3');
+    });
+  });
+
+  //
+  // Handsontable.Dom.hasClass
+  //
+  describe('hasClass', function() {
+    it("should checks if an element has passed class name", function () {
+      var element = document.createElement('div');
+
+      element.className = 'test test1 test2 test3 test4';
+
+      expect(Handsontable.Dom.hasClass(element, 'not-exists')).toBe(false);
+      expect(Handsontable.Dom.hasClass(element, 'test3')).toBe(true);
+      expect(Handsontable.Dom.hasClass(element, 'test')).toBe(true);
+      expect(Handsontable.Dom.hasClass(element, '')).toBe(false);
+    });
+  });
+
 });

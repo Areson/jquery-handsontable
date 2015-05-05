@@ -66,6 +66,18 @@ describe('FillHandle', function () {
     expect(isFillHandleVisible()).toBe(false);
   });
 
+  it('should appear when editor is discarded using the ESC key', function () {
+    handsontable({
+      fillHandle: true
+    });
+    selectCell(2, 2);
+
+    keyDown('enter');
+    keyDown('esc');
+
+    expect(isFillHandleVisible()).toBe(true);
+  });
+
   it('should add custom value after autofill', function () {
     handsontable({
       data: [
@@ -199,6 +211,39 @@ describe('FillHandle', function () {
 
       runs(function () {
         expect(hot.countRows()).toBe(6);
+      });
+
+    });
+  });
+
+  it('should not add new rows if the current number of rows reaches the maxRows setting', function () {
+    var hot = handsontable({
+      data: [
+        [1, 2, "test", 4, 5, 6],
+        [1, 2, 3, 4, 5, 6],
+        [1, 2, 3, 4, 5, 6],
+        [1, 2, 3, 4, 5, 6]
+      ],
+      maxRows: 5
+    });
+
+    selectCell(0, 2);
+
+    this.$container.find('.wtBorder.current.corner').simulate('mousedown');
+    this.$container.find('tr:last-child td:eq(2)').simulate('mouseover');
+
+    expect(hot.countRows()).toBe(4);
+    waits(300);
+
+    runs(function () {
+      expect(hot.countRows()).toBe(5);
+
+      this.$container.find('tr:last-child td:eq(2)').simulate('mouseover');
+
+      waits(300);
+
+      runs(function () {
+        expect(hot.countRows()).toBe(5);
       });
 
     });

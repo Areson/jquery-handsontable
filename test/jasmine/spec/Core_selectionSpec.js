@@ -84,10 +84,44 @@ describe('Core_selection', function () {
     handsontable();
     selectCell(0, 0);
 
-//    $("html").triggerHandler('mousedown');
     $('html').simulate('mousedown');
 
     expect(getSelected()).toBeUndefined();
+  });
+
+  it('should not deselect the currently selected cell after clicking on a scrollbar', function () {
+    var hot = handsontable({
+      outsideClickDeselects: false,
+      minRows: 20,
+      minCols: 2,
+      width: 400,
+      height: 100
+    });
+    selectCell(0, 0);
+
+    var holderBoundingBox = hot.view.wt.wtTable.holder.getBoundingClientRect(),
+      verticalScrollbarCoords = {
+        x: holderBoundingBox.left + holderBoundingBox.width - 3,
+        y: holderBoundingBox.top + ( holderBoundingBox.height / 2 )
+      },
+      horizontalScrollbarCoords = {
+        x: holderBoundingBox.left + ( holderBoundingBox.width / 2 ),
+        y: holderBoundingBox.top + holderBoundingBox.height - 3
+      };
+
+    $(hot.view.wt.wtTable.holder).simulate('mousedown', {
+      clientX: verticalScrollbarCoords.x,
+      clientY: verticalScrollbarCoords.y
+    });
+
+    expect(getSelected()).toEqual([0, 0, 0, 0]);
+
+    $(hot.view.wt.wtTable.holder).simulate('mousedown', {
+      clientX: horizontalScrollbarCoords.x,
+      clientY: horizontalScrollbarCoords.y
+    });
+
+    expect(getSelected()).toEqual([0, 0, 0, 0]);
   });
 
   it('should not deselect currently selected cell', function () {
@@ -96,7 +130,6 @@ describe('Core_selection', function () {
     });
     selectCell(0, 0);
 
-//    $("html").triggerHandler('mousedown');
     $("html").simulate('mousedown');
 
     expect(getSelected()).toEqual([0, 0, 0, 0]);
@@ -445,6 +478,95 @@ describe('Core_selection', function () {
     expect(getSelected()).toEqual([0, 0, 49, 0]);
   });
 
+  it("should allow to scroll the table when a whole column is selected and table is longer than it's container", function () {
+    var errCount = 0;
+    $(window).on("error.selectionTest", function () {
+      errCount++;
+    });
+
+    var onAfterScrollVertically = jasmine.createSpy('onAfterScrollVertically');
+
+    var hot = handsontable({
+      height: 100,
+      width: 300,
+      startRows: 100,
+      startCols: 5,
+      colHeaders: true,
+      rowHeaders: true,
+      afterScrollVertically: onAfterScrollVertically
+    });
+
+    var mainHolder = hot.view.wt.wtTable.holder;
+
+    mainHolder.scrollTop = 0;
+
+    this.$container.find('thead tr:eq(0) th:eq(2)').simulate('mousedown');
+    this.$container.find('thead tr:eq(0) th:eq(2)').simulate('mouseup');
+
+    mainHolder.scrollTop = 120;
+
+    waits(100);
+
+    runs(function () {
+      expect(errCount).toEqual(0); // expect no errors to be thrown
+
+      $(window).off("error.selectionTest");
+    });
+
+  });
+
+  it("should scroll to the end of the selection, when selecting cells using the keyboard", function () {
+    var hot = handsontable({
+      height: 300,
+      width: 300,
+      startRows: 50,
+      startCols: 50,
+      colHeaders: true,
+      rowHeaders: true,
+      fixedRowsTop: 2,
+      fixedColumnsLeft: 2
+    });
+
+    var mainHolder = hot.view.wt.wtTable.holder;
+
+    mainHolder.scrollTop = 100;
+    selectCell(1, 3);
+    keyDownUp('arrow_down');
+    expect(mainHolder.scrollTop).toEqual(0);
+    mainHolder.scrollTop = 100;
+    selectCell(1, 3);
+    keyDownUp('shift+arrow_down');
+    expect(mainHolder.scrollTop).toEqual(0);
+
+    mainHolder.scrollLeft = 100;
+    selectCell(3, 1);
+    keyDownUp('arrow_right');
+    expect(mainHolder.scrollLeft).toEqual(0);
+    mainHolder.scrollLeft = 100;
+    selectCell(3, 1);
+    keyDownUp('shift+arrow_right');
+    expect(mainHolder.scrollLeft).toEqual(0);
+
+    var lastVisibleColumn = hot.view.wt.wtTable.getLastVisibleColumn();
+    selectCell(3, lastVisibleColumn);
+    keyDownUp('arrow_right');
+    expect(hot.view.wt.wtTable.getLastVisibleColumn()).toEqual(lastVisibleColumn + 1);
+    keyDownUp('arrow_right');
+    expect(hot.view.wt.wtTable.getLastVisibleColumn()).toEqual(lastVisibleColumn + 2);
+    keyDownUp('shift+arrow_right');
+    expect(hot.view.wt.wtTable.getLastVisibleColumn()).toEqual(lastVisibleColumn + 3);
+
+    var lastVisibleRow = hot.view.wt.wtTable.getLastVisibleRow();
+    selectCell(lastVisibleRow, 3);
+    keyDownUp('arrow_down');
+    expect(hot.view.wt.wtTable.getLastVisibleRow()).toEqual(lastVisibleRow + 1);
+    keyDownUp('arrow_down');
+    expect(hot.view.wt.wtTable.getLastVisibleRow()).toEqual(lastVisibleRow + 2);
+    keyDownUp('shift+arrow_down');
+    expect(hot.view.wt.wtTable.getLastVisibleRow()).toEqual(lastVisibleRow + 3);
+
+  });
+
   it("should select the entire row after row header is clicked", function(){
     handsontable({
       startRows: 5,
@@ -475,5 +597,130 @@ describe('Core_selection', function () {
 
   });
 
+  it("should select a cell in a newly added row after automatic row adding, triggered by editing a cell in the last row with minSpareRows > 0", function () {
+    var hot = handsontable({
+      startRows: 5,
+      startCols: 2,
+      minSpareRows: 1
+    });
 
+    selectCell(4,0);
+
+    keyDownUp('enter');
+    waits(100);
+    runs(function() {
+      keyDownUp('enter');
+    });
+    waits(100);
+    runs(function () {
+      expect(countRows()).toEqual(6);
+      expect(getSelected()).toEqual([5,0,5,0]);
+    });
+  });
+
+  it("should change selected coords by modifying coords object via `modifyTransformStart` hook", function(){
+    var hot = handsontable({
+      startRows: 5,
+      startCols: 5
+    });
+    selectCell(0, 0);
+
+    hot.addHook('modifyTransformStart', function(coords) {
+      coords.col += 1;
+      coords.row += 1;
+    });
+    keyDown('arrow_down');
+
+    expect(getSelected()).toEqual([2, 1, 2, 1]);
+  });
+
+  it("should change selected coords by modifying coords object via `modifyTransformEnd` hook", function(){
+    var hot = handsontable({
+      startRows: 5,
+      startCols: 5
+    });
+    selectCell(0, 0);
+
+    hot.addHook('modifyTransformEnd', function(coords) {
+      coords.col += 2;
+      coords.row += 1;
+    });
+    keyDown('shift+arrow_down');
+
+    expect(getSelected()).toEqual([0, 0, 2, 2]);
+  });
+
+  it('should indicate is coords is out of bounds via `afterModifyTransformStart` hook', function () {
+    var spy = jasmine.createSpy();
+
+    var hot = handsontable({
+      startRows: 5,
+      startCols: 5
+    });
+    hot.addHook('afterModifyTransformStart', spy);
+
+    selectCell(2, 0);
+    keyDownUp('arrow_left');
+
+    expect(spy.mostRecentCall.args[1]).toBe(0);
+    expect(spy.mostRecentCall.args[2]).toBe(-1);
+
+    spy.reset();
+    selectCell(2, 4);
+    keyDownUp('arrow_right');
+
+    expect(spy.mostRecentCall.args[1]).toBe(0);
+    expect(spy.mostRecentCall.args[2]).toBe(1);
+
+    spy.reset();
+    selectCell(4, 2);
+    keyDownUp('arrow_down');
+
+    expect(spy.mostRecentCall.args[1]).toBe(1);
+    expect(spy.mostRecentCall.args[2]).toBe(0);
+
+    spy.reset();
+    selectCell(0, 2);
+    keyDownUp('arrow_up');
+
+    expect(spy.mostRecentCall.args[1]).toBe(-1);
+    expect(spy.mostRecentCall.args[2]).toBe(0);
+  });
+
+  it('should indicate is coords is out of bounds via `afterModifyTransformEnd` hook', function () {
+    var spy = jasmine.createSpy();
+
+    var hot = handsontable({
+      startRows: 5,
+      startCols: 5
+    });
+    hot.addHook('afterModifyTransformEnd', spy);
+
+    selectCell(2, 0);
+    keyDownUp('shift+arrow_left');
+
+    expect(spy.mostRecentCall.args[1]).toBe(0);
+    expect(spy.mostRecentCall.args[2]).toBe(-1);
+
+    spy.reset();
+    selectCell(2, 4);
+    keyDownUp('shift+arrow_right');
+
+    expect(spy.mostRecentCall.args[1]).toBe(0);
+    expect(spy.mostRecentCall.args[2]).toBe(1);
+
+    spy.reset();
+    selectCell(4, 2);
+    keyDownUp('shift+arrow_down');
+
+    expect(spy.mostRecentCall.args[1]).toBe(1);
+    expect(spy.mostRecentCall.args[2]).toBe(0);
+
+    spy.reset();
+    selectCell(0, 2);
+    keyDownUp('shift+arrow_up');
+
+    expect(spy.mostRecentCall.args[1]).toBe(-1);
+    expect(spy.mostRecentCall.args[2]).toBe(0);
+  });
 });

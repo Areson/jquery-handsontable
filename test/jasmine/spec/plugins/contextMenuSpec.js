@@ -47,6 +47,57 @@ describe('ContextMenu', function () {
 
 
     });
+
+    it("should open below the cursor coords if there's enough space below the cursor in the window viewport", function () {
+      var hot = handsontable({
+        contextMenu: true,
+        height: 100
+      }),
+      contextMenu = new Handsontable.ContextMenu(hot),
+      viewportHeight = 555;
+
+      var fakeMenu = {
+        offsetHeight: 100
+      };
+
+      var fakeCursor = {
+        topRelative: viewportHeight - fakeMenu.offsetHeight - 10
+      };
+
+      expect(contextMenu.menuFitsBelowCursor(fakeCursor,fakeMenu, viewportHeight)).toBe(true);
+      expect(contextMenu.menuFitsAboveCursor(fakeCursor,fakeMenu)).toBe(fakeCursor.topRelative >= fakeMenu.offsetHeight);
+
+      fakeMenu = {
+        offsetHeight: 300
+      };
+
+      fakeCursor = {
+        topRelative: document.body.clientHeight - fakeMenu.offsetHeight - 10
+      };
+
+      expect(contextMenu.menuFitsAboveCursor(fakeCursor,fakeMenu)).toBe(fakeCursor.topRelative >= fakeMenu.offsetHeight);
+    });
+
+    it("should open above the cursor coords if there's not enough space below the cursor in the window viewport", function () {
+      var hot = handsontable({
+          contextMenu: true,
+          height: 100
+        }),
+        contextMenu = new Handsontable.ContextMenu(hot),
+        viewportHeight = 555;
+
+      var fakeMenu = {
+        offsetHeight: 100
+      };
+
+      var fakeCursor = {
+        topRelative: viewportHeight - fakeMenu.offsetHeight + 20
+      };
+
+      expect(contextMenu.menuFitsBelowCursor(fakeCursor,fakeMenu, viewportHeight)).toBe(false);
+      expect(contextMenu.menuFitsAboveCursor(fakeCursor,fakeMenu)).toBe(fakeCursor.topRelative >= fakeMenu.offsetHeight);
+    });
+
   });
 
   describe('menu closing', function () {
@@ -201,7 +252,7 @@ describe('ContextMenu', function () {
 
     it ('should open subMenu if there is subMenu for item', function (){
       var hot = handsontable({
-        data: createSpreadsheetData(4, 4),
+        data: Handsontable.helper.createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
@@ -222,7 +273,7 @@ describe('ContextMenu', function () {
 
     it ('should NOT open subMenu if there is no subMenu for item', function () {
       var hot = handsontable({
-        data: createSpreadsheetData(4, 4),
+        data: Handsontable.helper.createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
@@ -278,7 +329,7 @@ describe('ContextMenu', function () {
 
     it("should disable column manipulation when row header selected", function () {
       var hot = handsontable({
-        data: createSpreadsheetData(4, 4),
+        data: Handsontable.helper.createSpreadsheetData(4, 4),
         contextMenu: true,
         colHeaders: true,
         rowHeaders: true,
@@ -308,7 +359,7 @@ describe('ContextMenu', function () {
     it("should disable row manipulation when column header selected", function () {
 
       var hot = handsontable({
-        data: createSpreadsheetData(4, 4),
+        data: Handsontable.helper.createSpreadsheetData(4, 4),
         contextMenu: true,
         colHeaders: true,
         rowHeaders: true,
@@ -339,7 +390,7 @@ describe('ContextMenu', function () {
 
     it("should insert row above selection", function () {
       var hot = handsontable({
-        data: createSpreadsheetData(4, 4),
+        data: Handsontable.helper.createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 400
       });
@@ -414,7 +465,7 @@ describe('ContextMenu', function () {
 
     it("should insert row above selection (reverse selection)", function () {
       var hot = handsontable({
-        data: createSpreadsheetData(4, 4),
+        data: Handsontable.helper.createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
@@ -436,7 +487,7 @@ describe('ContextMenu', function () {
 
     it("should insert row below selection", function () {
       var hot = handsontable({
-        data: createSpreadsheetData(4, 4),
+        data: Handsontable.helper.createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
@@ -458,7 +509,7 @@ describe('ContextMenu', function () {
 
     it("should insert row below selection (reverse selection)", function () {
       var hot = handsontable({
-        data: createSpreadsheetData(4, 4),
+        data: Handsontable.helper.createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
@@ -480,7 +531,7 @@ describe('ContextMenu', function () {
 
     it("should insert column on the left of selection", function () {
       var hot = handsontable({
-        data: createSpreadsheetData(4, 4),
+        data: Handsontable.helper.createSpreadsheetData(4, 4),
         contextMenu: true,
         width: 400,
         height: 400
@@ -503,7 +554,7 @@ describe('ContextMenu', function () {
 
     it("should insert column on the left of selection (reverse selection)", function () {
       var hot = handsontable({
-        data: createSpreadsheetData(4, 4),
+        data: Handsontable.helper.createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
@@ -525,7 +576,7 @@ describe('ContextMenu', function () {
 
     it("should insert column on the right of selection", function () {
       var hot = handsontable({
-        data: createSpreadsheetData(4, 4),
+        data: Handsontable.helper.createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
@@ -547,7 +598,7 @@ describe('ContextMenu', function () {
 
     it("should insert column on the right of selection (reverse selection)", function () {
       var hot = handsontable({
-        data: createSpreadsheetData(4, 4),
+        data: Handsontable.helper.createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
@@ -569,7 +620,7 @@ describe('ContextMenu', function () {
 
     it("should remove selected rows", function () {
       var hot = handsontable({
-        data: createSpreadsheetData(4, 4),
+        data: Handsontable.helper.createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
@@ -591,7 +642,7 @@ describe('ContextMenu', function () {
 
     it("should remove selected rows (reverse selection)", function () {
       var hot = handsontable({
-        data: createSpreadsheetData(4, 4),
+        data: Handsontable.helper.createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
@@ -613,7 +664,7 @@ describe('ContextMenu', function () {
 
     it("should remove selected columns", function () {
       var hot = handsontable({
-        data: createSpreadsheetData(4, 4),
+        data: Handsontable.helper.createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
@@ -635,7 +686,7 @@ describe('ContextMenu', function () {
 
     it("should remove selected columns (reverse selection)", function () {
       var hot = handsontable({
-        data: createSpreadsheetData(4, 4),
+        data: Handsontable.helper.createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
@@ -657,7 +708,7 @@ describe('ContextMenu', function () {
 
     it("should undo changes", function () {
       var hot = handsontable({
-        data: createSpreadsheetData(4, 4),
+        data: Handsontable.helper.createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
@@ -679,7 +730,7 @@ describe('ContextMenu', function () {
 
     it("should redo changes", function () {
       var hot = handsontable({
-        data: createSpreadsheetData(4, 4),
+        data: Handsontable.helper.createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
@@ -705,7 +756,7 @@ describe('ContextMenu', function () {
 
     it("should display only the specified actions", function () {
       var hot = handsontable({
-        data: createSpreadsheetData(4, 4),
+        data: Handsontable.helper.createSpreadsheetData(4, 4),
         contextMenu: ['remove_row', 'undo'],
         height: 100
       });
@@ -717,7 +768,7 @@ describe('ContextMenu', function () {
 
     it("should make a single selected cell read-only", function(){
       var hot = handsontable({
-        data: createSpreadsheetData(4, 4),
+        data: Handsontable.helper.createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
@@ -738,7 +789,7 @@ describe('ContextMenu', function () {
 
     it("should make a single selected cell writable, when it's set to read-only", function() {
       var hot = handsontable({
-        data: createSpreadsheetData(4, 4),
+        data: Handsontable.helper.createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
@@ -760,7 +811,7 @@ describe('ContextMenu', function () {
 
     it("should make a group of selected cells read-only, if all of them are writable", function(){
       var hot = handsontable({
-        data: createSpreadsheetData(4, 4),
+        data: Handsontable.helper.createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
@@ -787,7 +838,7 @@ describe('ContextMenu', function () {
 
     it("should align text left", function () {
       var hot = handsontable({
-        data: createSpreadsheetData(4, 4),
+        data: Handsontable.helper.createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
@@ -807,7 +858,7 @@ describe('ContextMenu', function () {
 
     it("should align text center", function () {
       var hot = handsontable({
-        data: createSpreadsheetData(4, 4),
+        data: Handsontable.helper.createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
@@ -828,7 +879,7 @@ describe('ContextMenu', function () {
 
     it("should align text right", function () {
       var hot = handsontable({
-        data: createSpreadsheetData(4, 4),
+        data: Handsontable.helper.createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
@@ -848,7 +899,7 @@ describe('ContextMenu', function () {
 
     it("should justify text", function () {
       var hot = handsontable({
-        data: createSpreadsheetData(4, 4),
+        data: Handsontable.helper.createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
@@ -869,7 +920,7 @@ describe('ContextMenu', function () {
 
     it("should vertical align text top", function () {
       var hot = handsontable({
-        data: createSpreadsheetData(4, 4),
+        data: Handsontable.helper.createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
@@ -890,7 +941,7 @@ describe('ContextMenu', function () {
 
     it("should vertical align text middle", function () {
       var hot = handsontable({
-        data: createSpreadsheetData(4, 4),
+        data: Handsontable.helper.createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
@@ -911,7 +962,7 @@ describe('ContextMenu', function () {
 
     it("should vertical align text bottom", function () {
       var hot = handsontable({
-        data: createSpreadsheetData(4, 4),
+        data: Handsontable.helper.createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
@@ -930,7 +981,7 @@ describe('ContextMenu', function () {
 
     it("should add comment", function () {
       var hot = handsontable({
-        data: createSpreadsheetData(4, 4),
+        data: Handsontable.helper.createSpreadsheetData(4, 4),
         contextMenu: true,
 				comments: true,
         height: 100
@@ -958,7 +1009,7 @@ describe('ContextMenu', function () {
 
     it("should delete comment", function () {
       var hot = handsontable({
-        data: createSpreadsheetData(4, 4),
+        data: Handsontable.helper.createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100,
 
@@ -978,7 +1029,7 @@ describe('ContextMenu', function () {
 
     it("should make a group of selected cells read-only, if all of them are writable (reverse selection)", function(){
       var hot = handsontable({
-        data: createSpreadsheetData(4, 4),
+        data: Handsontable.helper.createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
@@ -1005,7 +1056,7 @@ describe('ContextMenu', function () {
 
     it("should make a group of selected cells writable if at least one of them is read-only", function() {
       var hot = handsontable({
-        data: createSpreadsheetData(4, 4),
+        data: Handsontable.helper.createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
@@ -1032,7 +1083,7 @@ describe('ContextMenu', function () {
 
     it("should make a group of selected cells writable if at least one of them is read-only (reverse selection)", function() {
       var hot = handsontable({
-        data: createSpreadsheetData(4, 4),
+        data: Handsontable.helper.createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
@@ -2199,7 +2250,7 @@ describe('ContextMenu', function () {
 
 
       var hot = handsontable({
-        data: createSpreadsheetData(40, 30),
+        data: Handsontable.helper.createSpreadsheetData(40, 30),
         colWidths: 50, //can also be a number or a function
         rowHeaders: true,
         colHeaders: true,
@@ -2216,7 +2267,7 @@ describe('ContextMenu', function () {
 
 
       var hot = handsontable({
-        data: createSpreadsheetData(40, 30),
+        data: Handsontable.helper.createSpreadsheetData(40, 30),
         colWidths: 50, //can also be a number or a function
         rowHeaders: true,
         colHeaders: true,
@@ -2224,8 +2275,10 @@ describe('ContextMenu', function () {
         height: 100
       });
 
-      this.$wrapper.scrollTop(300);
-      this.$wrapper.scroll();
+      var mainHolder = hot.view.wt.wtTable.holder;
+
+      $(mainHolder).scrollTop(300);
+      $(mainHolder).scroll();
 
       selectCell(15, 3);
       contextMenu();
@@ -2239,7 +2292,7 @@ describe('ContextMenu', function () {
 
 
       var hot = handsontable({
-        data: createSpreadsheetData(40, 30),
+        data: Handsontable.helper.createSpreadsheetData(40, 30),
         colWidths: 50, //can also be a number or a function
         rowHeaders: true,
         colHeaders: true,
@@ -2247,13 +2300,15 @@ describe('ContextMenu', function () {
         height: 100
       });
 
+      var $mainHolder = $(hot.view.wt.wtTable.holder);
+
       selectCell(15, 3);
-      var scrollTop = this.$wrapper.scrollTop();
+      var scrollTop = $mainHolder.scrollTop();
       contextMenu();
 
       expect($('.htContextMenu').is(':visible')).toBe(true);
 
-      this.$wrapper.scrollTop(scrollTop + 60).scroll();
+      $mainHolder.scrollTop(scrollTop + 60).scroll();
 
       expect($('.htContextMenu').is(':visible')).toBe(true);
 
@@ -2261,7 +2316,7 @@ describe('ContextMenu', function () {
 
       expect($('.htContextMenu').is(':visible')).toBe(true);
 
-      this.$wrapper.scrollTop(scrollTop + 100).scroll();
+      $mainHolder.scrollTop(scrollTop + 100).scroll();
 
       expect($('.htContextMenu').is(':visible')).toBe(true)
 
@@ -2271,7 +2326,7 @@ describe('ContextMenu', function () {
 
 
       var hot = handsontable({
-        data: createSpreadsheetData(40, 30),
+        data: Handsontable.helper.createSpreadsheetData(40, 30),
         colWidths: 50, //can also be a number or a function
         rowHeaders: true,
         colHeaders: true,
@@ -2279,23 +2334,52 @@ describe('ContextMenu', function () {
         height: 100
       });
 
+      var mainHolder = $(hot.view.wt.wtTable.holder);
+
       selectCell(15, 3);
-      var scrollTop = this.$wrapper.scrollTop();
+      var scrollTop = mainHolder.scrollTop();
       contextMenu();
       var $menu = $(hot.contextMenu.menu);
 
       expect($menu.is(':visible')).toBe(true);
 
-      this.$wrapper.scrollTop(scrollTop + 60).scroll();
+      mainHolder.scrollTop(scrollTop + 60).scroll();
 
       expect($menu.is(':visible')).toBe(false);
 
       spyOn(hot.contextMenu, 'close');
 
-      this.$wrapper.scrollTop(scrollTop + 100).scroll();
+      mainHolder.scrollTop(scrollTop + 100).scroll();
 
       expect(hot.contextMenu.close).not.toHaveBeenCalled();
 
+    });
+
+    it("should not scroll the window when hovering over context menu items (#1897 reopen)", function () {
+      this.$wrapper.css("overflow","visible");
+
+      var hot = handsontable({
+        data: Handsontable.helper.createSpreadsheetData(403, 303),
+        colWidths: 50, //can also be a number or a function
+        contextMenu: true
+      });
+
+      var beginningScrollX = window.scrollX;
+
+      selectCell(2, 4);
+      contextMenu();
+
+      var htCMguid = Object.keys(hot.contextMenu.htMenus)[0];
+      var cmInstance = hot.contextMenu.htMenus[htCMguid];
+
+      cmInstance.selectCell(3,0);
+      expect(window.scrollX).toEqual(beginningScrollX);
+
+      cmInstance.selectCell(4,0);
+      expect(window.scrollX).toEqual(beginningScrollX);
+
+      cmInstance.selectCell(6,0);
+      expect(window.scrollX).toEqual(beginningScrollX);
     });
 
   });

@@ -175,21 +175,19 @@ describe('Core_validate', function () {
     runs(function () {
       expect(result.instance).toEqual(getInstance());
     });
-
-
   });
 
   it('should add class name `htInvalid` to an cell that does not validate - on validateCells', function () {
     var onAfterValidate = jasmine.createSpy('onAfterValidate');
 
     var hot = handsontable({
-      data: createSpreadsheetData(2, 2),
+      data: Handsontable.helper.createSpreadsheetData(2, 2),
       validator: function (value, callb) {
         if (value == "B1") {
-          callb(false)
+          callb(false);
         }
         else {
-          callb(true)
+          callb(true);
         }
       },
       afterValidate: onAfterValidate
@@ -207,8 +205,71 @@ describe('Core_validate', function () {
       expect(this.$container.find('td.htInvalid').length).toEqual(1);
       expect(this.$container.find('td:not(.htInvalid)').length).toEqual(3);
     });
+  });
 
+  it('should add class name `htInvalid` to an cell that does not validate - when we trigger validateCell', function () {
+    var onAfterValidate = jasmine.createSpy('onAfterValidate');
 
+    var hot = handsontable({
+      data: Handsontable.helper.createSpreadsheetData(2, 2),
+      validator: function (value, cb) {
+        cb(false);
+      },
+      afterValidate: onAfterValidate
+    });
+    expect(this.$container.find('td:not(.htInvalid)').length).toEqual(4);
+
+    hot.validateCell(hot.getDataAtCell(1, 1), hot.getCellMeta(1, 1), function() {});
+
+    waitsFor(function () {
+      return onAfterValidate.calls.length === 1;
+    }, 'Cell validation', 1000);
+
+    runs(function () {
+      expect(this.$container.find('td.htInvalid').length).toEqual(1);
+      expect(this.$container.find('td:not(.htInvalid)').length).toEqual(3);
+    });
+  });
+
+  it('should remove class name `htInvalid` from an cell that does validate - when we change validator rules', function () {
+    var onAfterValidate = jasmine.createSpy('onAfterValidate');
+    var isValid = false;
+    var validator = function() {
+        return isValid;
+    };
+
+    var hot = handsontable({
+      data: Handsontable.helper.createSpreadsheetData(2, 2),
+      validator: function (value, cb) {
+        cb(validator());
+      },
+      afterValidate: onAfterValidate
+    });
+    waitsFor(function () {
+      return onAfterValidate.calls.length === 4;
+    }, 'Cell validation', 1000);
+
+    hot.validateCells(function() {});
+
+    runs(function () {
+      expect(this.$container.find('td.htInvalid').length).toEqual(4);
+      expect(this.$container.find('td:not(.htInvalid)').length).toEqual(0);
+    });
+
+    runs(function () {
+      isValid = true;
+      onAfterValidate.reset();
+      hot.validateCell(hot.getDataAtCell(1, 1), hot.getCellMeta(1, 1), function() {});
+    });
+
+    waitsFor(function () {
+      return onAfterValidate.calls.length === 1;
+    }, 'Cell validation', 1000);
+
+    runs(function () {
+      expect(this.$container.find('td.htInvalid').length).toEqual(3);
+      expect(this.$container.find('td:not(.htInvalid)').length).toEqual(1);
+    });
   });
 
   it('should add class name `htInvalid` to an cell that does not validate - on edit', function () {
@@ -216,13 +277,13 @@ describe('Core_validate', function () {
     var onAfterValidate = jasmine.createSpy('onAfterValidate');
 
     handsontable({
-      data: createSpreadsheetData(2, 2),
+      data: Handsontable.helper.createSpreadsheetData(2, 2),
       validator: function (value, callb) {
         if (value == 'test') {
-          callb(false)
+          callb(false);
         }
         else {
-          callb(true)
+          callb(true);
         }
       },
       afterValidate: onAfterValidate
@@ -248,15 +309,15 @@ describe('Core_validate', function () {
     var validator = jasmine.createSpy('validator').andCallThrough();
     validator.plan = function (value, callb) {
       if (value == 123) {
-        callb(false)
+        callb(false);
       }
       else {
-        callb(true)
+        callb(true);
       }
     };
 
     handsontable({
-      data: createSpreadsheetData(2, 2),
+      data: Handsontable.helper.createSpreadsheetData(2, 2),
       type: 'numeric',
       validator: validator,
       afterValidate: onAfterValidate
@@ -291,11 +352,11 @@ describe('Core_validate', function () {
 
   });
 
-  it('should add class name `htInvalid` to an cell that does not validate - after validateCells & render', function () {
+  it('should add class name `htInvalid` to an cell that does not validate - after validateCells', function () {
     var onAfterValidate = jasmine.createSpy('onAfterValidate');
 
     var hot = handsontable({
-      data: createSpreadsheetData(2, 2),
+      data: Handsontable.helper.createSpreadsheetData(2, 2),
       afterValidate: onAfterValidate
     });
 
@@ -310,18 +371,16 @@ describe('Core_validate', function () {
     runs(function () {
       updateSettings({validator: function (value, callb) {
         if (value == 'test') {
-          callb(false)
+          callb(false);
         }
         else {
-          callb(true)
+          callb(true);
         }
       }});
 
       onAfterValidate.reset();
 
-      hot.validateCells(function () {
-        hot.render();
-      });
+      hot.validateCells(function () {});
     });
 
     waitsFor(function () {
@@ -338,7 +397,7 @@ describe('Core_validate', function () {
     var onAfterValidate = jasmine.createSpy('onAfterValidate');
 
     var hot = handsontable({
-      data: createSpreadsheetData(2, 2),
+      data: Handsontable.helper.createSpreadsheetData(2, 2),
       validator: function (value, callb) {
         if (value == 'A1') {
           callb(false)
@@ -380,7 +439,7 @@ describe('Core_validate', function () {
     var validatedChanges;
 
     handsontable({
-      data: createSpreadsheetData(5, 2),
+      data: Handsontable.helper.createSpreadsheetData(5, 2),
       allowInvalid: false,
       validator: function (value, callb) {
         setTimeout(function () {
@@ -427,7 +486,7 @@ describe('Core_validate', function () {
     var onBeforeChange = jasmine.createSpy('onBeforeChange');
 
     var hot = handsontable({
-      data: createSpreadsheetData(5, 2),
+      data: Handsontable.helper.createSpreadsheetData(5, 2),
       allowInvalid: false,
       validator: function (value, callback) {
         callback(true);
@@ -455,7 +514,7 @@ describe('Core_validate', function () {
     var onBeforeChange = jasmine.createSpy('onBeforeChange');
 
     var hot = handsontable({
-      data: createSpreadsheetData(5, 2),
+      data: Handsontable.helper.createSpreadsheetData(5, 2),
       allowInvalid: false,
       validator: function (value, callback) {
         setTimeout(function () {
@@ -485,7 +544,7 @@ describe('Core_validate', function () {
     var onAfterChange = jasmine.createSpy('onAfterChange');
 
     var hot = handsontable({
-      data: createSpreadsheetData(5, 2),
+      data: Handsontable.helper.createSpreadsheetData(5, 2),
       allowInvalid: false,
       validator: function (value, callback) {
         callback(true);
@@ -513,7 +572,7 @@ describe('Core_validate', function () {
     var onAfterChange = jasmine.createSpy('onAfterChange');
 
     var hot = handsontable({
-      data: createSpreadsheetData(5, 2),
+      data: Handsontable.helper.createSpreadsheetData(5, 2),
       allowInvalid: false,
       validator: function (value, callback) {
         setTimeout(function () {
@@ -555,7 +614,7 @@ describe('Core_validate', function () {
 
 
     handsontable({
-      data: createSpreadsheetData(5, 2),
+      data: Handsontable.helper.createSpreadsheetData(5, 2),
       allowInvalid: false,
       afterValidate: onAfterValidate,
       afterChange: onAfterChange,
@@ -577,16 +636,16 @@ describe('Core_validate', function () {
 
     expect(document.activeElement.nodeName).toEqual('TEXTAREA');
 
-    waitsFor(function(){
+    waitsFor(function() {
       return onAfterValidate.calls.length > 0 && onAfterChange.calls.length > 0;
     }, 'Cell validation and value change', 1000);
 
     runs(function () {
       expect(isEditorVisibleBeforeChange).toBe(true);
-      expect(isEditorVisibleAfterChange).toBe(false);
+      expect(isEditorVisibleAfterChange).toBe(true);
+      expect(isEditorVisible()).toBe(false);
       expect(document.activeElement.nodeName).toEqual('BODY');
     });
-
   });
 
   it('should validate edited cell after selecting another cell', function () {
@@ -595,7 +654,7 @@ describe('Core_validate', function () {
     var validatedValue;
 
     handsontable({
-      data: createSpreadsheetData(5, 2),
+      data: Handsontable.helper.createSpreadsheetData(5, 2),
       allowInvalid: false,
       afterValidate: function () {
         beforeElement = document.activeElement;
@@ -636,7 +695,7 @@ describe('Core_validate', function () {
     var validationResult;
 
     handsontable({
-      data: createSpreadsheetData(5, 2),
+      data: Handsontable.helper.createSpreadsheetData(5, 2),
       allowInvalid: false,
       validator: function (value, callback) {
         setTimeout(function () {
@@ -673,7 +732,7 @@ describe('Core_validate', function () {
     var validationResult;
 
     handsontable({
-      data: createSpreadsheetData(5, 2),
+      data: Handsontable.helper.createSpreadsheetData(5, 2),
       allowInvalid: false,
       validator: function (value, callback) {
         validated = true;
@@ -707,7 +766,7 @@ describe('Core_validate', function () {
     var validationResult;
 
     handsontable({
-      data: createSpreadsheetData(5, 2),
+      data: Handsontable.helper.createSpreadsheetData(5, 2),
       allowInvalid: false,
       validator: function (value, callback) {
         setTimeout(function () {
@@ -747,7 +806,7 @@ describe('Core_validate', function () {
     var validationResult;
 
     handsontable({
-      data: createSpreadsheetData(5, 2),
+      data: Handsontable.helper.createSpreadsheetData(5, 2),
       allowInvalid: false,
       validator: function (value, callback) {
         validationResult = value.length == 2;
@@ -789,7 +848,7 @@ describe('Core_validate', function () {
     var validationResult;
 
     handsontable({
-      data: createSpreadsheetData(5, 2),
+      data: Handsontable.helper.createSpreadsheetData(5, 2),
       allowInvalid: true,
       validator: function (value, callback) {
         setTimeout(function () {
@@ -827,7 +886,7 @@ describe('Core_validate', function () {
     var validationResult;
 
     handsontable({
-      data: createSpreadsheetData(5, 2),
+      data: Handsontable.helper.createSpreadsheetData(5, 2),
       allowInvalid: false,
       validator: function (value, callback) {
         setTimeout(function () {
@@ -882,7 +941,7 @@ describe('Core_validate', function () {
     var validationResult;
 
     handsontable({
-      data: createSpreadsheetData(5, 2),
+      data: Handsontable.helper.createSpreadsheetData(5, 2),
       allowInvalid: false,
       validator: function (value, callback) {
         setTimeout(function () {
