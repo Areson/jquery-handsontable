@@ -131,8 +131,7 @@ WalkontableTableRenderer.prototype.renderRows = function(totalRows, rowsToRender
       this.resetOversizedRow(sourceRowIndex);
     }
 
-    if (TR.firstChild) {
-      /* ISO Changes - Keeping in case I need them
+    if (TR.firstChild) {      
       this.instance.wtSettings.setIgnoreRowHeightCache(true);
       var height = this.instance.wtTable.getRowHeight(sourceRowIndex); //if I have 2 fixed columns with one-line content and the 3rd column has a multiline content, this is the way to make sure that the overlay will has same row height
       if(height) {
@@ -157,15 +156,15 @@ WalkontableTableRenderer.prototype.renderRows = function(totalRows, rowsToRender
         }
         else {
           TR.firstChild.style.height = '';
-        }*/
-
+        }
+      }
       //if I have 2 fixed columns with one-line content and the 3rd column has a multiline content, this is the way to make sure that the overlay will has same row height
-      var height = this.instance.wtTable.getRowHeight(sourceRowIndex);
+      /*var height = this.instance.wtTable.getRowHeight(sourceRowIndex);
       if (height) {
         TR.firstChild.style.height = height + 'px';
       } else {
         TR.firstChild.style.height = '';
-      }
+      }*/
 
       this.instance.wtSettings.setIgnoreRowHeightCache(false);
     }
@@ -368,16 +367,13 @@ WalkontableTableRenderer.prototype.adjustAvailableNodes = function() {
   this.adjustThead();
 };
 
-<<<<<<< HEAD
-WalkontableTableRenderer.prototype.renderColumnHeaders = function () {
-  if (!this.columnHeaderCount || this.instance.ignoreColumnHeaders) {
-=======
 /**
  * Renders the column headers
  */
 WalkontableTableRenderer.prototype.renderColumnHeaders = function() {
+  // ISO
+  //if (!this.columnHeaderCount || this.instance.ignoreColumnHeaders) {
   if (!this.columnHeaderCount) {
->>>>>>> master
     return;
   }
 

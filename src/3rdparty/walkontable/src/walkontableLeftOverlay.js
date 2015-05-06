@@ -140,6 +140,8 @@ WalkontableLeftOverlay.prototype.applyToDOM = function () {
 
 WalkontableLeftOverlay.prototype.syncOverlayOffset = function () {
   if (typeof this.instance.wtViewport.rowsRenderCalculator.startPosition === 'number') {
+    // Adjust for an occasional 1px difference in the scrollTop values
+    var adjust = this.clone.wtTable.holder.scrollTop - this.instance.wtTable.holder.scrollTop;
     this.clone.wtTable.spreader.style.top = this.instance.wtViewport.rowsRenderCalculator.startPosition + 'px';
   } else {
     this.clone.wtTable.spreader.style.top = '';

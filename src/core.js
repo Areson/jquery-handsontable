@@ -531,8 +531,7 @@ Handsontable.Core = function Core(rootElement, userSettings) {
      * Starts selection range on given td object.
      *
      * @param {WalkontableCellCoords} coords
-     * @param keepEditorOpened
-     */
+     * @param keepEditorOpened    
      * @param {String} [type='cell'] Where the selection was started: 'cell', 'row', or 'col'
      */
     setRangeStart: function (coords, keepEditorOpened, type) {
@@ -1041,7 +1040,8 @@ Handsontable.Core = function Core(rootElement, userSettings) {
           valid = Handsontable.hooks.run(instance, "afterValidate", valid, value, cellProperties.row, cellProperties.prop, source, priorState);
           cellProperties.valid = valid;
 
-          done(valid);
+          //done(valid);
+          callback(valid);
           Handsontable.hooks.run(instance, "postAfterValidate", valid, value, cellProperties.row, cellProperties.prop, source);
         });
       }, 0));
@@ -1051,8 +1051,8 @@ Handsontable.Core = function Core(rootElement, userSettings) {
       cellProperties.valid = true;
       // This should also be asynchronous to mirror normal validators
       instance._registerTimeout(setTimeout(function() {
-        //callback(true);  
-        done(cellProperties.valid);
+        callback(cellProperties.valid);  
+        //done(cellProperties.valid);
       }, 0));      
     }
   };

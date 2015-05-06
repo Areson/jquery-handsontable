@@ -64,7 +64,7 @@ module.exports = function (grunt) {
       src: [
         'src/*.js',
         'src/editors/*.js',
-        '!src/plugins/undoRedo/undoRedo.js',
+        //'!src/plugins/undoRedo/undoRedo.js',
         'src/plugins/**/!(*.spec).js',
         'src/renderers/*.js',
         'src/validators/*.js',

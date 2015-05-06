@@ -88,15 +88,15 @@ CopyPasteClass.prototype.onKeyDown = function(event) {
   var _this = this,
     isCtrlDown = false;
 
-<<<<<<< HEAD
-    if (isCtrlDown) {
+
+    /*if (isCtrlDown) {
       if (document.activeElement !== that.elTextarea && (that.getSelectionText() != '' || ['INPUT', 'SELECT', 'TEXTAREA'].indexOf(document.activeElement.nodeName) != -1 || document.activeElement.contentEditable === 'true')) {
         return; //this is needed by fragmentSelection in Handsontable. Ignore copypaste.js behavior if fragment of cell text is selected
       }
-=======
+    }*/
+
   function isActiveElementEditable() {
     var element = document.activeElement;
->>>>>>> master
 
     if (element.shadowRoot && element.shadowRoot.activeElement) {
       element = element.shadowRoot.activeElement;

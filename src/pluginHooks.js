@@ -513,12 +513,6 @@ var Hooks = function() {
      */
     modifyCol: [],
 
-    // Modifiers
-    modifyColWidth: [],
-    modifyRowHeight: [],
-    modifyRow: [],
-    modifyCol: [],
-
     // Hook Tracking
     beforeHook: [],
     afterHook: []

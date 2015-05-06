@@ -1,0 +1,1 @@
+node .\node_modules\hot-builder\bin\hot-builder build -D --output-dir dist --input .\package.json --add-module=AutoColumnSize,Autofill,ContextMenu,CopyPaste,DragToScroll,ManualColumnMove,ManualColumnResize,PersistentState,Search
