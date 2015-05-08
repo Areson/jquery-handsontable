@@ -129,10 +129,11 @@ function ManualColumnResize() {
         if (autoresizeTimeout == null) {
           autoresizeTimeout = setTimeout(function() {
             if (dblclick >= 2) {
-              newSize = instance.determineColumnWidth.call(instance, currentCol);
+              newSize = instance.determineColumnWidth.call(instance, currentCol, true);
               setManualSize(currentCol, newSize);
               instance.forceFullRender = true;
               instance.view.render(); //updates all
+              saveManualColumnWidths.call(instance);
               Handsontable.hooks.run(instance, 'afterColumnResize', currentCol, newSize);
             }
             dblclick = 0;

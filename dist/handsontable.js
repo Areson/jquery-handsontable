@@ -7,7 +7,7 @@
  * Licensed under the MIT license.
  * http://handsontable.com/
  *
- * Date: Wed May 06 2015 08:36:49 GMT-0700 (Pacific Daylight Time)
+ * Date: Fri May 08 2015 07:14:50 GMT-0700 (Pacific Daylight Time)
  */
 /*jslint white: true, browser: true, plusplus: true, indent: 4, maxerr: 50 */
 
@@ -9745,16 +9745,16 @@ function AutoColumnSize() {
   };
   this.determineIfChanged = function(force) {
     if (force) {
-      htAutoColumnSize.determineColumnsWidth.apply(this, arguments);
+      htAutoColumnSize.determineColumnsWidth.call(this);
     }
   };
-  this.determineColumnWidth = function(col) {
+  this.determineColumnWidth = function(col, manual) {
     var instance = this,
         tmp = instance.autoColumnSizeTmp;
     if (!tmp.container) {
       createTmpContainer.call(tmp, instance);
     }
-    tmp.container.className = instance.rootElement.className + ' htAutoColumnSize';
+    tmp.container.className = instance.rootElement.className + ' htAutoColumnSize' + (manual ? ' manual' : '');
     tmp.table.className = instance.table.className;
     var rows = instance.countRows();
     var samples = {};
@@ -9807,14 +9807,16 @@ function AutoColumnSize() {
     parent.removeChild(tmp.container);
     return width;
   };
-  this.determineColumnsWidth = function() {
+  this.determineColumnsWidth = function(manual) {
     var instance = this;
     var settings = this.getSettings();
     if (settings.autoColumnSize || !settings.colWidths) {
       var cols = this.countCols();
       for (var c = 0; c < cols; c++) {
-        if (!instance._getColWidthFromSettings(c)) {
-          this.autoColumnWidths[c] = plugin.determineColumnWidth.call(instance, c);
+        if (!instance._getColWidthFromSettings(c) && (!instance.manualColumnWidths || !instance.manualColumnWidths[c])) {
+          this.autoColumnWidths[c] = plugin.determineColumnWidth.call(instance, c, manual);
+        } else {
+          this.autoColumnWidths[c] = null;
         }
       }
     }
@@ -11632,10 +11634,11 @@ function ManualColumnResize() {
         if (autoresizeTimeout == null) {
           autoresizeTimeout = setTimeout(function() {
             if (dblclick >= 2) {
-              newSize = instance.determineColumnWidth.call(instance, currentCol);
+              newSize = instance.determineColumnWidth.call(instance, currentCol, true);
               setManualSize(currentCol, newSize);
               instance.forceFullRender = true;
               instance.view.render();
+              saveManualColumnWidths.call(instance);
               Handsontable.hooks.run(instance, 'afterColumnResize', currentCol, newSize);
             }
             dblclick = 0;

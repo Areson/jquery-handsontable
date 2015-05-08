@@ -70,7 +70,7 @@ function AutoColumnSize() {
    */
   this.determineIfChanged = function (force) {
     if (force) {
-      htAutoColumnSize.determineColumnsWidth.apply(this, arguments);
+      htAutoColumnSize.determineColumnsWidth.call(this);
     }
   };
 
@@ -82,7 +82,7 @@ function AutoColumnSize() {
    * @param {Number} col
    * @returns {Number}
    */
-  this.determineColumnWidth = function (col) {
+  this.determineColumnWidth = function (col, manual) {
     var instance = this
       , tmp = instance.autoColumnSizeTmp;
 
@@ -90,7 +90,7 @@ function AutoColumnSize() {
       createTmpContainer.call(tmp, instance);
     }
 
-    tmp.container.className = instance.rootElement.className + ' htAutoColumnSize';
+    tmp.container.className = instance.rootElement.className + ' htAutoColumnSize' + (manual ? ' manual' : '');
     tmp.table.className = instance.table.className;
 
     var rows = instance.countRows();
@@ -157,7 +157,7 @@ function AutoColumnSize() {
    * @function determineColumnsWidth
    * @memberof AutoColumnSize#
    */
-  this.determineColumnsWidth = function () {
+  this.determineColumnsWidth = function (manual) {
     var instance = this;
     var settings = this.getSettings();
 
@@ -165,8 +165,11 @@ function AutoColumnSize() {
       var cols = this.countCols();
 
       for (var c = 0; c < cols; c++) {
-        if (!instance._getColWidthFromSettings(c)) {
-          this.autoColumnWidths[c] = plugin.determineColumnWidth.call(instance, c);
+        if (!instance._getColWidthFromSettings(c) && (!instance.manualColumnWidths || !instance.manualColumnWidths[c])) {
+          this.autoColumnWidths[c] = plugin.determineColumnWidth.call(instance, c, manual);
+        }
+        else {
+          this.autoColumnWidths[c] = null;
         }
       }
     }
